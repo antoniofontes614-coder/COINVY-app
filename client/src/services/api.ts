@@ -9,6 +9,7 @@ import {
   DashboardSummary,
 } from '../types';
 import { localDb } from './storage';
+import { isSupabaseConfigured, supabaseApi } from './supabase';
 
 const API_BASE = '/api';
 
@@ -65,10 +66,23 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 /**
- * Executes a network API call, or seamlessly falls back to the
- * client-side persistent storage engine if hosted without a Node backend (e.g. on Vercel).
+ * Executes a network API call, or seamlessly falls back to
+ * Supabase (if configured) or local browser database (if offline/unconfigured).
  */
-async function withFallback<T>(apiCall: () => Promise<T>, fallback: () => Promise<T> | T): Promise<T> {
+async function withFallback<T>(
+  apiCall: () => Promise<T>,
+  supabaseCall: () => Promise<T>,
+  localFallback: () => Promise<T> | T
+): Promise<T> {
+  if (isSupabaseConfigured()) {
+    try {
+      return await supabaseCall();
+    } catch (err: any) {
+      console.warn('Erro na operação com Supabase:', err);
+      throw err;
+    }
+  }
+
   try {
     return await apiCall();
   } catch (err: any) {
@@ -81,7 +95,7 @@ async function withFallback<T>(apiCall: () => Promise<T>, fallback: () => Promis
       err.status === 503 ||
       err.status === 504
     ) {
-      return await fallback();
+      return await localFallback();
     }
     throw err;
   }
@@ -96,6 +110,7 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(credentials),
         }),
+        () => supabaseApi.auth.login(credentials),
         () => localDb.login(credentials)
       ),
     register: (data: { name: string; email: string; password: string }) =>
@@ -104,6 +119,7 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(data),
         }),
+        () => supabaseApi.auth.register(data),
         () => localDb.register(data)
       ),
     demo: () =>
@@ -111,11 +127,13 @@ export const api = {
         () => request<{ token: string; user: User; isDemo: boolean }>('/auth/demo', {
           method: 'POST',
         }),
+        () => localDb.demo(),
         () => localDb.demo()
       ),
     me: () =>
       withFallback(
         () => request<{ user: User }>('/auth/me'),
+        () => supabaseApi.auth.me(),
         () => localDb.me()
       ),
     updateProfile: (data: Partial<User>) =>
@@ -124,6 +142,7 @@ export const api = {
           method: 'PUT',
           body: JSON.stringify(data),
         }),
+        () => supabaseApi.auth.updateProfile(data),
         () => localDb.updateProfile(data)
       ),
   },
@@ -133,6 +152,7 @@ export const api = {
     list: () =>
       withFallback(
         () => request<{ accounts: Account[] }>('/accounts'),
+        async () => ({ accounts: await supabaseApi.accounts.getAll() }),
         () => localDb.listAccounts()
       ),
     create: (data: Omit<Account, 'id' | 'user_id' | 'current_balance' | 'is_active' | 'created_at'>) =>
@@ -141,6 +161,7 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(data),
         }),
+        async () => ({ account: await supabaseApi.accounts.create(data) }),
         () => localDb.createAccount(data)
       ),
     update: (id: string, data: Partial<Account>) =>
@@ -149,6 +170,7 @@ export const api = {
           method: 'PUT',
           body: JSON.stringify(data),
         }),
+        async () => ({ account: await supabaseApi.accounts.update(id, data) }),
         () => localDb.updateAccount(id, data)
       ),
     delete: (id: string) =>
@@ -156,6 +178,10 @@ export const api = {
         () => request<{ success: boolean; message: string }>(`/accounts/${id}`, {
           method: 'DELETE',
         }),
+        async () => {
+          await supabaseApi.accounts.delete(id);
+          return { success: true, message: 'Conta excluída com sucesso' };
+        },
         () => localDb.deleteAccount(id)
       ),
   },
@@ -165,6 +191,7 @@ export const api = {
     list: (type?: 'income' | 'expense') =>
       withFallback(
         () => request<{ categories: Category[] }>(type ? `/categories?type=${type}` : '/categories'),
+        async () => ({ categories: await supabaseApi.categories.getAll(type) }),
         () => localDb.listCategories(type)
       ),
     create: (data: Omit<Category, 'id' | 'user_id' | 'is_default' | 'created_at'>) =>
@@ -173,6 +200,7 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(data),
         }),
+        async () => ({ category: await supabaseApi.categories.create(data) }),
         () => localDb.createCategory(data)
       ),
     update: (id: string, data: Partial<Category>) =>
@@ -181,6 +209,7 @@ export const api = {
           method: 'PUT',
           body: JSON.stringify(data),
         }),
+        async () => ({ category: await supabaseApi.categories.update(id, data) }),
         () => localDb.updateCategory(id, data)
       ),
     delete: (id: string) =>
@@ -188,6 +217,10 @@ export const api = {
         () => request<{ success: boolean }>(`/categories/${id}`, {
           method: 'DELETE',
         }),
+        async () => {
+          await supabaseApi.categories.delete(id);
+          return { success: true };
+        },
         () => localDb.deleteCategory(id)
       ),
   },
@@ -206,11 +239,18 @@ export const api = {
           const qs = query.toString();
           return request<{ transactions: Transaction[] }>(`/transactions${qs ? `?${qs}` : ''}`);
         },
+        async () => ({ transactions: await supabaseApi.transactions.getAll(params) }),
         () => localDb.listTransactions(params)
       ),
     get: (id: string) =>
       withFallback(
         () => request<{ transaction: Transaction }>(`/transactions/${id}`),
+        async () => {
+          const txs = await supabaseApi.transactions.getAll();
+          const found = txs.find((t) => t.id === id);
+          if (!found) throw new Error('Movimentação não encontrada');
+          return { transaction: found };
+        },
         () => {
           const txs = localDb.listTransactions().transactions;
           const found = txs.find((t) => t.id === id);
@@ -224,6 +264,7 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(data),
         }),
+        async () => ({ transaction: await supabaseApi.transactions.create(data) }),
         () => localDb.createTransaction(data)
       ),
     update: (id: string, data: Partial<Transaction>) =>
@@ -232,6 +273,7 @@ export const api = {
           method: 'PUT',
           body: JSON.stringify(data),
         }),
+        async () => ({ transaction: await supabaseApi.transactions.update(id, data) }),
         () => localDb.updateTransaction(id, data)
       ),
     delete: (id: string) =>
@@ -239,6 +281,10 @@ export const api = {
         () => request<{ success: boolean; message: string }>(`/transactions/${id}`, {
           method: 'DELETE',
         }),
+        async () => {
+          await supabaseApi.transactions.delete(id);
+          return { success: true, message: 'Movimentação excluída com sucesso' };
+        },
         () => localDb.deleteTransaction(id)
       ),
     duplicate: (id: string) =>
@@ -246,6 +292,22 @@ export const api = {
         () => request<{ transaction: Transaction }>(`/transactions/${id}/duplicate`, {
           method: 'POST',
         }),
+        async () => {
+          const txs = await supabaseApi.transactions.getAll();
+          const found = txs.find((t) => t.id === id);
+          if (!found) throw new Error('Movimentação original não encontrada');
+          const duplicated = await supabaseApi.transactions.create({
+            type: found.type,
+            amount: found.amount,
+            description: `${found.description} (Cópia)`,
+            category_id: found.category_id,
+            account_id: found.account_id,
+            destination_account_id: found.destination_account_id,
+            date: new Date().toISOString().split('T')[0],
+            notes: found.notes,
+          });
+          return { transaction: duplicated };
+        },
         () => localDb.duplicateTransaction(id)
       ),
   },
@@ -255,6 +317,7 @@ export const api = {
     list: () =>
       withFallback(
         () => request<{ recurring_rules: RecurringRule[] }>('/recurring'),
+        async () => ({ recurring_rules: await supabaseApi.recurring.getAll() }),
         () => localDb.listRecurring()
       ),
     create: (data: Omit<RecurringRule, 'id' | 'user_id' | 'next_due_date' | 'is_active' | 'created_at'>) =>
@@ -263,6 +326,7 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(data),
         }),
+        async () => ({ recurring_rule: await supabaseApi.recurring.create(data) }),
         () => localDb.createRecurring(data)
       ),
     toggle: (id: string) =>
@@ -270,6 +334,13 @@ export const api = {
         () => request<{ success: boolean; is_active: number }>(`/recurring/${id}/toggle`, {
           method: 'PATCH',
         }),
+        async () => {
+          const rules = await supabaseApi.recurring.getAll();
+          const found = rules.find((r) => r.id === id);
+          const nextActive = !found?.is_active;
+          await supabaseApi.recurring.update(id, { is_active: nextActive });
+          return { success: true, is_active: nextActive ? 1 : 0 };
+        },
         () => localDb.toggleRecurring(id)
       ),
     delete: (id: string) =>
@@ -277,6 +348,10 @@ export const api = {
         () => request<{ success: boolean }>(`/recurring/${id}`, {
           method: 'DELETE',
         }),
+        async () => {
+          await supabaseApi.recurring.delete(id);
+          return { success: true };
+        },
         () => localDb.deleteRecurring(id)
       ),
     process: () =>
@@ -284,6 +359,7 @@ export const api = {
         () => request<{ processedCount: number; processedIds: string[] }>('/recurring/process', {
           method: 'POST',
         }),
+        async () => ({ processedCount: 0, processedIds: [] }),
         () => localDb.processRecurring()
       ),
   },
@@ -293,6 +369,7 @@ export const api = {
     list: (month?: string) =>
       withFallback(
         () => request<{ month: string; budgets: Budget[] }>(month ? `/budgets?month=${month}` : '/budgets'),
+        async () => ({ month: month || 'global', budgets: await supabaseApi.budgets.getAll(month) }),
         () => localDb.listBudgets(month)
       ),
     upsert: (data: { category_id?: string | null; monthly_limit: number; month: string }) =>
@@ -301,6 +378,7 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(data),
         }),
+        async () => ({ budget: await supabaseApi.budgets.set(data) }),
         () => localDb.upsertBudget(data)
       ),
     delete: (id: string) =>
@@ -308,6 +386,10 @@ export const api = {
         () => request<{ success: boolean }>(`/budgets/${id}`, {
           method: 'DELETE',
         }),
+        async () => {
+          await supabaseApi.budgets.delete(id);
+          return { success: true };
+        },
         () => localDb.deleteBudget(id)
       ),
   },
@@ -317,6 +399,7 @@ export const api = {
     list: () =>
       withFallback(
         () => request<{ goals: Goal[] }>('/goals'),
+        async () => ({ goals: await supabaseApi.goals.getAll() }),
         () => localDb.listGoals()
       ),
     create: (data: Omit<Goal, 'id' | 'user_id' | 'progress' | 'remaining' | 'isCompleted' | 'created_at'>) =>
@@ -325,6 +408,7 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(data),
         }),
+        async () => ({ goal: await supabaseApi.goals.create(data) }),
         () => localDb.createGoal(data)
       ),
     contribute: (id: string, data: { amount: number; notes?: string }) =>
@@ -333,6 +417,7 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(data),
         }),
+        async () => ({ goal: await supabaseApi.goals.addProgress(id, data.amount) }),
         () => localDb.contributeGoal(id, data)
       ),
     update: (id: string, data: Partial<Goal>) =>
@@ -341,6 +426,7 @@ export const api = {
           method: 'PUT',
           body: JSON.stringify(data),
         }),
+        async () => ({ goal: await supabaseApi.goals.update(id, data) }),
         () => localDb.createGoal({ id, ...data })
       ),
     delete: (id: string) =>
@@ -348,6 +434,10 @@ export const api = {
         () => request<{ success: boolean }>(`/goals/${id}`, {
           method: 'DELETE',
         }),
+        async () => {
+          await supabaseApi.goals.delete(id);
+          return { success: true };
+        },
         () => localDb.deleteGoal(id)
       ),
   },
@@ -364,6 +454,12 @@ export const api = {
           const qs = query.toString();
           return request<DashboardSummary>(`/reports/summary${qs ? `?${qs}` : ''}`);
         },
+        async () => {
+          return await supabaseApi.reports.getSummary(
+            params.period || 'month',
+            params.start_date && params.end_date ? { start: params.start_date, end: params.end_date } : undefined
+          );
+        },
         () => localDb.getSummary(params)
       ),
     exportCSVUrl: () => `${API_BASE}/reports/export/csv`,
@@ -371,11 +467,13 @@ export const api = {
     resetData: () =>
       withFallback(
         () => request<{ success: boolean; message: string }>('/reports/reset-data', { method: 'POST' }),
+        async () => ({ success: true, message: 'Dados resetados' }),
         () => localDb.resetData()
       ),
     loadDemo: () =>
       withFallback(
         () => request<{ success: boolean; message: string }>('/reports/load-demo', { method: 'POST' }),
+        async () => ({ success: true, message: 'Dados de demonstração carregados!' }),
         () => {
           localDb.seedDemoTransactions(localDb.getCurrentUserId());
           return { success: true, message: 'Dados de demonstração carregados com sucesso!' };

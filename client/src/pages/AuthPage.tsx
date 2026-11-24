@@ -7,10 +7,13 @@ import {
   ArrowRight,
   ShieldCheck,
   TrendingUp,
-  PieChart
+  PieChart,
+  Database
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CoinvyLogo } from '../components/CoinvyLogo';
+import { SupabaseModal } from '../components/SupabaseModal';
+import { isSupabaseConfigured } from '../services/supabase';
 
 export const AuthPage: React.FC = () => {
   const { login, register, demoLogin } = useAuth();
@@ -21,6 +24,8 @@ export const AuthPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+  const isSupabaseActive = isSupabaseConfigured();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,7 +210,35 @@ export const AuthPage: React.FC = () => {
           <span>Experimentar Conta de Demonstração (1 Clique)</span>
         </button>
 
+        {/* Supabase Cloud Connection Button */}
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setIsSupabaseModalOpen(true)}
+            className="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs flex items-center justify-between transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <Database size={15} className={isSupabaseActive ? 'text-emerald-500' : 'text-slate-400'} />
+              <span>Conexão Supabase</span>
+            </div>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                isSupabaseActive
+                  ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              {isSupabaseActive ? 'Conectado' : 'Configurar'}
+            </span>
+          </button>
+        </div>
+
       </div>
+
+      <SupabaseModal
+        isOpen={isSupabaseModalOpen}
+        onClose={() => setIsSupabaseModalOpen(false)}
+      />
 
       {/* Feature highlights footer */}
       <div className="mt-8 grid grid-cols-3 gap-4 max-w-sm text-center text-[11px] text-slate-500 dark:text-slate-400">
