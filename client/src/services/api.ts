@@ -65,6 +65,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return response.json();
 }
 
+function hasBackendApi(): boolean {
+  if (typeof window === 'undefined') return false;
+  // Express server only exists on localhost during local dev
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1';
+}
+
 /**
  * Executes a network API call, or seamlessly falls back to
  * Supabase (if configured) or local browser database (if offline/unconfigured).
@@ -74,6 +81,7 @@ async function withFallback<T>(
   supabaseCall: () => Promise<T>,
   localFallback: () => Promise<T> | T
 ): Promise<T> {
+  // 1. If Supabase is configured, use Supabase
   if (isSupabaseConfigured()) {
     try {
       return await supabaseCall();
@@ -83,21 +91,17 @@ async function withFallback<T>(
     }
   }
 
+  // 2. If running on Vercel or any non-localhost host without a Node server, go directly to local database!
+  if (!hasBackendApi()) {
+    return await localFallback();
+  }
+
+  // 3. On localhost, try the Express API; if it fails with any network/server error, use local fallback
   try {
     return await apiCall();
   } catch (err: any) {
-    if (
-      err.message === 'NO_BACKEND_AVAILABLE' ||
-      err.message === 'Failed to fetch' ||
-      err.name === 'TypeError' ||
-      err.status === 404 ||
-      err.status === 502 ||
-      err.status === 503 ||
-      err.status === 504
-    ) {
-      return await localFallback();
-    }
-    throw err;
+    console.warn('Backend local indisponível, usando armazenamento local:', err);
+    return await localFallback();
   }
 }
 
