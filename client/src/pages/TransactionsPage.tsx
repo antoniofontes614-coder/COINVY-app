@@ -96,13 +96,15 @@ export const TransactionsPage: React.FC = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    const token = localStorage.getItem('coinvy_token') || localStorage.getItem('nexo_token');
-    fetch('/api/reports/export/csv', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.blob())
-      .then((blob) => {
+  const handleExportCSV = async () => {
+    try {
+      const token = localStorage.getItem('coinvy_token') || localStorage.getItem('nexo_token');
+      const res = await fetch('/api/reports/export/csv', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && !contentType.includes('text/html')) {
+        const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -110,8 +112,12 @@ export const TransactionsPage: React.FC = () => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-      })
-      .catch((err) => alert('Erro ao exportar CSV: ' + err.message));
+        return;
+      }
+    } catch {}
+
+    const { exportTransactionsCSV } = await import('../utils/export');
+    exportTransactionsCSV(filteredTransactions);
   };
 
   return (

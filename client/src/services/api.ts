@@ -6,8 +6,9 @@ import {
   RecurringRule,
   Budget,
   Goal,
-  DashboardSummary
+  DashboardSummary,
 } from '../types';
+import { localDb } from './storage';
 
 const API_BASE = '/api';
 
@@ -34,8 +35,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers,
   });
 
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    // Backend is not available on this host (e.g. Vercel static deployment)
+    throw new ApiError('NO_BACKEND_AVAILABLE', response.status);
+  }
+
   if (response.status === 401) {
-    // If unauthorized, clear token and notify
     localStorage.removeItem('coinvy_token');
     localStorage.removeItem('nexo_token');
     localStorage.removeItem('coinvy_user');
@@ -58,188 +64,322 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return response.json();
 }
 
+/**
+ * Executes a network API call, or seamlessly falls back to the
+ * client-side persistent storage engine if hosted without a Node backend (e.g. on Vercel).
+ */
+async function withFallback<T>(apiCall: () => Promise<T>, fallback: () => Promise<T> | T): Promise<T> {
+  try {
+    return await apiCall();
+  } catch (err: any) {
+    if (
+      err.message === 'NO_BACKEND_AVAILABLE' ||
+      err.message === 'Failed to fetch' ||
+      err.name === 'TypeError' ||
+      err.status === 404 ||
+      err.status === 502 ||
+      err.status === 503 ||
+      err.status === 504
+    ) {
+      return await fallback();
+    }
+    throw err;
+  }
+}
+
 export const api = {
   // Auth
   auth: {
     login: (credentials: { email: string; password: string }) =>
-      request<{ token: string; user: User }>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials),
-      }),
+      withFallback(
+        () => request<{ token: string; user: User }>('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify(credentials),
+        }),
+        () => localDb.login(credentials)
+      ),
     register: (data: { name: string; email: string; password: string }) =>
-      request<{ token: string; user: User }>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ token: string; user: User }>('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.register(data)
+      ),
     demo: () =>
-      request<{ token: string; user: User; isDemo: boolean }>('/auth/demo', {
-        method: 'POST',
-      }),
-    me: () => request<{ user: User }>('/auth/me'),
+      withFallback(
+        () => request<{ token: string; user: User; isDemo: boolean }>('/auth/demo', {
+          method: 'POST',
+        }),
+        () => localDb.demo()
+      ),
+    me: () =>
+      withFallback(
+        () => request<{ user: User }>('/auth/me'),
+        () => localDb.me()
+      ),
     updateProfile: (data: Partial<User>) =>
-      request<{ user: User }>('/auth/profile', {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ user: User }>('/auth/profile', {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.updateProfile(data)
+      ),
   },
 
   // Accounts
   accounts: {
-    list: () => request<{ accounts: Account[] }>('/accounts'),
+    list: () =>
+      withFallback(
+        () => request<{ accounts: Account[] }>('/accounts'),
+        () => localDb.listAccounts()
+      ),
     create: (data: Omit<Account, 'id' | 'user_id' | 'current_balance' | 'is_active' | 'created_at'>) =>
-      request<{ account: Account }>('/accounts', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ account: Account }>('/accounts', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.createAccount(data)
+      ),
     update: (id: string, data: Partial<Account>) =>
-      request<{ account: Account }>(`/accounts/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ account: Account }>(`/accounts/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.updateAccount(id, data)
+      ),
     delete: (id: string) =>
-      request<{ success: boolean; message: string }>(`/accounts/${id}`, {
-        method: 'DELETE',
-      }),
+      withFallback(
+        () => request<{ success: boolean; message: string }>(`/accounts/${id}`, {
+          method: 'DELETE',
+        }),
+        () => localDb.deleteAccount(id)
+      ),
   },
 
   // Categories
   categories: {
     list: (type?: 'income' | 'expense') =>
-      request<{ categories: Category[] }>(type ? `/categories?type=${type}` : '/categories'),
+      withFallback(
+        () => request<{ categories: Category[] }>(type ? `/categories?type=${type}` : '/categories'),
+        () => localDb.listCategories(type)
+      ),
     create: (data: Omit<Category, 'id' | 'user_id' | 'is_default' | 'created_at'>) =>
-      request<{ category: Category }>('/categories', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ category: Category }>('/categories', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.createCategory(data)
+      ),
     update: (id: string, data: Partial<Category>) =>
-      request<{ category: Category }>(`/categories/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ category: Category }>(`/categories/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.updateCategory(id, data)
+      ),
     delete: (id: string) =>
-      request<{ success: boolean }>(`/categories/${id}`, {
-        method: 'DELETE',
-      }),
+      withFallback(
+        () => request<{ success: boolean }>(`/categories/${id}`, {
+          method: 'DELETE',
+        }),
+        () => localDb.deleteCategory(id)
+      ),
   },
 
   // Transactions
   transactions: {
-    list: (params: {
-      type?: string;
-      category_id?: string;
-      account_id?: string;
-      start_date?: string;
-      end_date?: string;
-      search?: string;
-      min_amount?: number;
-      max_amount?: number;
-      limit?: number;
-      offset?: number;
-    } = {}) => {
-      const query = new URLSearchParams();
-      Object.entries(params).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && val !== '') {
-          query.append(key, String(val));
+    list: (params: any = {}) =>
+      withFallback(
+        () => {
+          const query = new URLSearchParams();
+          Object.entries(params).forEach(([key, val]) => {
+            if (val !== undefined && val !== null && val !== '') {
+              query.append(key, String(val));
+            }
+          });
+          const qs = query.toString();
+          return request<{ transactions: Transaction[] }>(`/transactions${qs ? `?${qs}` : ''}`);
+        },
+        () => localDb.listTransactions(params)
+      ),
+    get: (id: string) =>
+      withFallback(
+        () => request<{ transaction: Transaction }>(`/transactions/${id}`),
+        () => {
+          const txs = localDb.listTransactions().transactions;
+          const found = txs.find((t) => t.id === id);
+          if (!found) throw new Error('Movimentação não encontrada');
+          return { transaction: found };
         }
-      });
-      const qs = query.toString();
-      return request<{ transactions: Transaction[] }>(`/transactions${qs ? `?${qs}` : ''}`);
-    },
-    get: (id: string) => request<{ transaction: Transaction }>(`/transactions/${id}`),
+      ),
     create: (data: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) =>
-      request<{ transaction: Transaction }>('/transactions', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ transaction: Transaction }>('/transactions', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.createTransaction(data)
+      ),
     update: (id: string, data: Partial<Transaction>) =>
-      request<{ transaction: Transaction }>(`/transactions/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ transaction: Transaction }>(`/transactions/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.updateTransaction(id, data)
+      ),
     delete: (id: string) =>
-      request<{ success: boolean; message: string }>(`/transactions/${id}`, {
-        method: 'DELETE',
-      }),
+      withFallback(
+        () => request<{ success: boolean; message: string }>(`/transactions/${id}`, {
+          method: 'DELETE',
+        }),
+        () => localDb.deleteTransaction(id)
+      ),
     duplicate: (id: string) =>
-      request<{ transaction: Transaction }>(`/transactions/${id}/duplicate`, {
-        method: 'POST',
-      }),
+      withFallback(
+        () => request<{ transaction: Transaction }>(`/transactions/${id}/duplicate`, {
+          method: 'POST',
+        }),
+        () => localDb.duplicateTransaction(id)
+      ),
   },
 
   // Recurring Rules
   recurring: {
-    list: () => request<{ recurring_rules: RecurringRule[] }>('/recurring'),
+    list: () =>
+      withFallback(
+        () => request<{ recurring_rules: RecurringRule[] }>('/recurring'),
+        () => localDb.listRecurring()
+      ),
     create: (data: Omit<RecurringRule, 'id' | 'user_id' | 'next_due_date' | 'is_active' | 'created_at'>) =>
-      request<{ recurring_rule: RecurringRule }>('/recurring', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ recurring_rule: RecurringRule }>('/recurring', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.createRecurring(data)
+      ),
     toggle: (id: string) =>
-      request<{ success: boolean; is_active: number }>(`/recurring/${id}/toggle`, {
-        method: 'PATCH',
-      }),
+      withFallback(
+        () => request<{ success: boolean; is_active: number }>(`/recurring/${id}/toggle`, {
+          method: 'PATCH',
+        }),
+        () => localDb.toggleRecurring(id)
+      ),
     delete: (id: string) =>
-      request<{ success: boolean }>(`/recurring/${id}`, {
-        method: 'DELETE',
-      }),
+      withFallback(
+        () => request<{ success: boolean }>(`/recurring/${id}`, {
+          method: 'DELETE',
+        }),
+        () => localDb.deleteRecurring(id)
+      ),
     process: () =>
-      request<{ processedCount: number; processedIds: string[] }>('/recurring/process', {
-        method: 'POST',
-      }),
+      withFallback(
+        () => request<{ processedCount: number; processedIds: string[] }>('/recurring/process', {
+          method: 'POST',
+        }),
+        () => localDb.processRecurring()
+      ),
   },
 
   // Budgets
   budgets: {
     list: (month?: string) =>
-      request<{ month: string; budgets: Budget[] }>(month ? `/budgets?month=${month}` : '/budgets'),
+      withFallback(
+        () => request<{ month: string; budgets: Budget[] }>(month ? `/budgets?month=${month}` : '/budgets'),
+        () => localDb.listBudgets(month)
+      ),
     upsert: (data: { category_id?: string | null; monthly_limit: number; month: string }) =>
-      request<{ budget: Budget }>('/budgets', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ budget: Budget }>('/budgets', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.upsertBudget(data)
+      ),
     delete: (id: string) =>
-      request<{ success: boolean }>(`/budgets/${id}`, {
-        method: 'DELETE',
-      }),
+      withFallback(
+        () => request<{ success: boolean }>(`/budgets/${id}`, {
+          method: 'DELETE',
+        }),
+        () => localDb.deleteBudget(id)
+      ),
   },
 
   // Goals
   goals: {
-    list: () => request<{ goals: Goal[] }>('/goals'),
+    list: () =>
+      withFallback(
+        () => request<{ goals: Goal[] }>('/goals'),
+        () => localDb.listGoals()
+      ),
     create: (data: Omit<Goal, 'id' | 'user_id' | 'progress' | 'remaining' | 'isCompleted' | 'created_at'>) =>
-      request<{ goal: Goal }>('/goals', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ goal: Goal }>('/goals', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.createGoal(data)
+      ),
     contribute: (id: string, data: { amount: number; notes?: string }) =>
-      request<{ goal: Goal }>(`/goals/${id}/contribute`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ goal: Goal }>(`/goals/${id}/contribute`, {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.contributeGoal(id, data)
+      ),
     update: (id: string, data: Partial<Goal>) =>
-      request<{ goal: Goal }>(`/goals/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
+      withFallback(
+        () => request<{ goal: Goal }>(`/goals/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        }),
+        () => localDb.createGoal({ id, ...data })
+      ),
     delete: (id: string) =>
-      request<{ success: boolean }>(`/goals/${id}`, {
-        method: 'DELETE',
-      }),
+      withFallback(
+        () => request<{ success: boolean }>(`/goals/${id}`, {
+          method: 'DELETE',
+        }),
+        () => localDb.deleteGoal(id)
+      ),
   },
 
   // Reports & Analytics & Data Management
   reports: {
-    getSummary: (params: { period?: string; start_date?: string; end_date?: string } = {}) => {
-      const query = new URLSearchParams();
-      if (params.period) query.append('period', params.period);
-      if (params.start_date) query.append('start_date', params.start_date);
-      if (params.end_date) query.append('end_date', params.end_date);
-      const qs = query.toString();
-      return request<DashboardSummary>(`/reports/summary${qs ? `?${qs}` : ''}`);
-    },
+    getSummary: (params: { period?: string; start_date?: string; end_date?: string } = {}) =>
+      withFallback(
+        () => {
+          const query = new URLSearchParams();
+          if (params.period) query.append('period', params.period);
+          if (params.start_date) query.append('start_date', params.start_date);
+          if (params.end_date) query.append('end_date', params.end_date);
+          const qs = query.toString();
+          return request<DashboardSummary>(`/reports/summary${qs ? `?${qs}` : ''}`);
+        },
+        () => localDb.getSummary(params)
+      ),
     exportCSVUrl: () => `${API_BASE}/reports/export/csv`,
     exportJSONUrl: () => `${API_BASE}/reports/export/json`,
-    resetData: () => request<{ success: boolean; message: string }>('/reports/reset-data', { method: 'POST' }),
-    loadDemo: () => request<{ success: boolean; message: string }>('/reports/load-demo', { method: 'POST' }),
+    resetData: () =>
+      withFallback(
+        () => request<{ success: boolean; message: string }>('/reports/reset-data', { method: 'POST' }),
+        () => localDb.resetData()
+      ),
+    loadDemo: () =>
+      withFallback(
+        () => request<{ success: boolean; message: string }>('/reports/load-demo', { method: 'POST' }),
+        () => {
+          localDb.seedDemoTransactions(localDb.getCurrentUserId());
+          return { success: true, message: 'Dados de demonstração carregados com sucesso!' };
+        }
+      ),
   },
 };

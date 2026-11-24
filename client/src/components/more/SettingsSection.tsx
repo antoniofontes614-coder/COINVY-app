@@ -17,6 +17,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
 import { api } from '../../services/api';
+import { localDb } from '../../services/storage';
+import { exportTransactionsCSV, downloadFile } from '../../utils/export';
 
 export const SettingsSection: React.FC = () => {
   const { user, updateUser, theme, toggleTheme, hideBalances, toggleHideBalances, logout } = useAuth();
@@ -42,13 +44,15 @@ export const SettingsSection: React.FC = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    const token = localStorage.getItem('coinvy_token') || localStorage.getItem('nexo_token');
-    fetch('/api/reports/export/csv', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.blob())
-      .then((blob) => {
+  const handleExportCSV = async () => {
+    try {
+      const token = localStorage.getItem('coinvy_token') || localStorage.getItem('nexo_token');
+      const res = await fetch('/api/reports/export/csv', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && !contentType.includes('text/html')) {
+        const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -56,17 +60,22 @@ export const SettingsSection: React.FC = () => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-      })
-      .catch((err) => alert('Erro ao exportar CSV: ' + err.message));
+        return;
+      }
+    } catch {}
+
+    exportTransactionsCSV(localDb.listTransactions().transactions);
   };
 
-  const handleExportJSON = () => {
-    const token = localStorage.getItem('coinvy_token') || localStorage.getItem('nexo_token');
-    fetch('/api/reports/export/json', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.blob())
-      .then((blob) => {
+  const handleExportJSON = async () => {
+    try {
+      const token = localStorage.getItem('coinvy_token') || localStorage.getItem('nexo_token');
+      const res = await fetch('/api/reports/export/json', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && !contentType.includes('text/html')) {
+        const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -74,8 +83,23 @@ export const SettingsSection: React.FC = () => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-      })
-      .catch((err) => alert('Erro ao exportar backup: ' + err.message));
+        return;
+      }
+    } catch {}
+
+    const backup = {
+      exportDate: new Date().toISOString(),
+      version: '2.0',
+      data: {
+        user,
+        accounts: localDb.listAccounts().accounts,
+        categories: localDb.listCategories().categories,
+        transactions: localDb.listTransactions().transactions,
+        budgets: localDb.listBudgets().budgets,
+        goals: localDb.listGoals().goals,
+      },
+    };
+    downloadFile(JSON.stringify(backup, null, 2), `coinvy_backup_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
   };
 
   const handleLoadDemo = async () => {
