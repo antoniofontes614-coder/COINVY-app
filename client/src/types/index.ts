@@ -8,6 +8,7 @@ export interface User {
   date_format: string;
   hide_balances: number | boolean;
   theme: string;
+  avatar_url?: string | null;
 }
 
 export interface Account {

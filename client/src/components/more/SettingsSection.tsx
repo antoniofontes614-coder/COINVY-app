@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   User,
   Sun,
@@ -15,7 +15,9 @@ import {
   Database,
   AlertTriangle,
   RotateCcw,
-  X
+  X,
+  Camera,
+  Upload
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
@@ -26,8 +28,9 @@ import { SupabaseModal } from '../SupabaseModal';
 import { isSupabaseConfigured } from '../../services/supabase';
 
 export const SettingsSection: React.FC = () => {
-  const { user, updateUser, theme, toggleTheme, hideBalances, toggleHideBalances, logout } = useAuth();
+  const { user, updateUser, updateAvatar, theme, toggleTheme, setThemeMode, hideBalances, toggleHideBalances, logout } = useAuth();
   const { refreshData } = useFinance();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name || '');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
@@ -38,6 +41,58 @@ export const SettingsSection: React.FC = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const isSupabaseActive = isSupabaseConfigured();
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (JPG, PNG, WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (readerEvent) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 256;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          updateAvatar(dataUrl);
+          setNameSavedSuccess(true);
+          setTimeout(() => setNameSavedSuccess(false), 3000);
+        }
+      };
+      img.src = readerEvent.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    if (window.confirm('Deseja remover sua foto de perfil e voltar para a inicial do seu nome?')) {
+      updateAvatar(null);
+    }
+  };
 
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,10 +222,77 @@ export const SettingsSection: React.FC = () => {
       )}
 
       {/* Profile Card */}
-      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
+      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xs space-y-5">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
           Perfil do Usuário
         </h3>
+
+        {/* Avatar / Photo Upload Section */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="relative group shrink-0">
+            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500 shadow-md bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-800 dark:text-emerald-200 font-extrabold text-2xl select-none">
+              {user?.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{(user?.name || 'U').charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              title="Alterar foto de perfil"
+              className="absolute bottom-0 right-0 p-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-transform active:scale-90"
+            >
+              <Camera size={14} />
+            </button>
+          </div>
+
+          <div className="flex-1 text-center sm:text-left space-y-2">
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                Foto de Perfil
+              </h4>
+              <p className="text-xs text-slate-400">
+                Adicione sua foto para personalizar seu perfil no DIM+
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+              >
+                <Upload size={13} />
+                <span>{user?.avatar_url ? 'Trocar Foto' : 'Adicionar Foto'}</span>
+              </button>
+
+              {user?.avatar_url && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="px-3.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                >
+                  <Trash2 size={13} />
+                  <span>Remover Foto</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
         <form onSubmit={handleUpdateName} className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -182,7 +304,8 @@ export const SettingsSection: React.FC = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white"
+                placeholder="Seu nome"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -201,16 +324,16 @@ export const SettingsSection: React.FC = () => {
           <div className="flex items-center justify-between pt-1">
             {nameSavedSuccess ? (
               <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 size={14} /> Nome salvo com sucesso!
+                <CheckCircle2 size={14} /> Dados atualizados com sucesso!
               </span>
             ) : <span />}
 
             <button
               type="submit"
               disabled={isUpdatingName}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-bold rounded-xl shadow-xs transition-colors"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
             >
-              {isUpdatingName ? 'Salvando...' : 'Salvar Alterações'}
+              {isUpdatingName ? 'Salvando...' : 'Salvar Nome'}
             </button>
           </div>
         </form>
@@ -223,28 +346,50 @@ export const SettingsSection: React.FC = () => {
         </h3>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {/* Theme */}
-          <div className="py-3 flex items-center justify-between">
+          {/* Theme Switcher Segmented */}
+          <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-slate-800 text-amber-600 flex items-center justify-center">
-                {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-slate-800 text-amber-600 flex items-center justify-center shrink-0">
+                {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Tema da Interface
+                  Modo de Exibição
                 </p>
                 <span className="text-[11px] text-slate-400">
-                  Atualmente: {theme === 'dark' ? 'Modo Escuro' : 'Modo Claro'}
+                  {theme === 'dark' ? 'Modo Escuro ativado' : 'Modo Claro ativado'}
                 </span>
               </div>
             </div>
 
-            <button
-              onClick={toggleTheme}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              Alternar Tema
-            </button>
+            {/* Segmented Light / Dark Toggle Buttons */}
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700/60 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setThemeMode('light')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  theme === 'light'
+                    ? 'bg-white text-emerald-700 shadow-sm border border-emerald-500/40'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Sun size={14} className={theme === 'light' ? 'text-amber-500' : ''} />
+                <span>Modo Claro</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setThemeMode('dark')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  theme === 'dark'
+                    ? 'bg-slate-900 text-emerald-400 shadow-sm border border-emerald-500/40'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Moon size={14} className={theme === 'dark' ? 'text-emerald-400' : ''} />
+                <span>Modo Escuro</span>
+              </button>
+            </div>
           </div>
 
           {/* Privacy */}

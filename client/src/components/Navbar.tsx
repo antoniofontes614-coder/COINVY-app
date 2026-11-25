@@ -114,13 +114,21 @@ export const Navbar: React.FC<NavbarProps> = () => {
               {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
             </button>
 
-            {/* User initial avatar */}
+            {/* User initial avatar or uploaded photo */}
             {user && (
               <div
                 title={user.name}
-                className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-bold text-xs flex items-center justify-center border border-emerald-300/40 select-none ml-1"
+                className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center border border-emerald-400/60 select-none ml-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold text-xs shrink-0"
               >
-                {user.name.charAt(0).toUpperCase()}
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{user.name.charAt(0).toUpperCase()}</span>
+                )}
               </div>
             )}
 

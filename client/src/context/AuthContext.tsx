@@ -10,6 +10,8 @@ interface AuthContextType {
   theme: 'light' | 'dark';
   toggleHideBalances: () => void;
   toggleTheme: () => void;
+  setThemeMode: (mode: 'light' | 'dark') => void;
+  updateAvatar: (avatarUrl: string | null) => Promise<void>;
   login: (credentials: { email: string; password: string }) => Promise<void>;
   register: (data: { name: string; email: string; password: string }) => Promise<void>;
   demoLogin: () => Promise<void>;
@@ -92,6 +94,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const setThemeMode = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme);
+    localStorage.setItem('coinvy_theme', newTheme);
+    if (user) {
+      api.auth.updateProfile({ theme: newTheme }).catch(() => {});
+    }
+  };
+
+  const updateAvatar = async (avatarUrl: string | null) => {
+    if (!user) return;
+    const updated = { ...user, avatar_url: avatarUrl };
+    setUser(updated);
+    localStorage.setItem('coinvy_user', JSON.stringify(updated));
+    try {
+      await api.auth.updateProfile({ avatar_url: avatarUrl });
+    } catch {}
+  };
+
   const login = async (credentials: { email: string; password: string }) => {
     const res = await api.auth.login(credentials);
     setToken(res.token);
@@ -126,9 +146,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUser = async (data: Partial<User>) => {
-    const res = await api.auth.updateProfile(data);
-    setUser(res.user);
-    localStorage.setItem('coinvy_user', JSON.stringify(res.user));
+    try {
+      const res = await api.auth.updateProfile(data);
+      const updated = { ...user, ...res.user, ...data };
+      setUser(updated);
+      localStorage.setItem('coinvy_user', JSON.stringify(updated));
+    } catch {
+      if (user) {
+        const updated = { ...user, ...data };
+        setUser(updated);
+        localStorage.setItem('coinvy_user', JSON.stringify(updated));
+      }
+    }
   };
 
   return (
@@ -141,6 +170,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         theme,
         toggleHideBalances,
         toggleTheme,
+        setThemeMode,
+        updateAvatar,
         login,
         register,
         demoLogin,
