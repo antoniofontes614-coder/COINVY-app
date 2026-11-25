@@ -10,7 +10,11 @@ import {
   DashboardSummary,
 } from '../types';
 
-// Read config from env or user configuration in localStorage
+// Official production cloud database credentials for DIM+
+const DEFAULT_SUPABASE_URL = 'https://kietsrviiykbwlsvtpmv.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpZXRzcnZpaXlrYndsc3Z0cG12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2MTA3MzUsImV4cCI6MjExMTE4NjczNX0.uZQNt08zbnoXNiE0CKnlWylS6lcEGD_8iZ-NbQeUFdY';
+
+// Read config from env, user configuration in localStorage, or official defaults
 export function getSupabaseCredentials() {
   const envUrl = import.meta.env.VITE_SUPABASE_URL || '';
   const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -18,8 +22,8 @@ export function getSupabaseCredentials() {
   const localUrl = localStorage.getItem('coinvy_supabase_url') || '';
   const localKey = localStorage.getItem('coinvy_supabase_anon_key') || '';
 
-  const url = (envUrl || localUrl).trim();
-  const anonKey = (envKey || localKey).trim();
+  const url = (envUrl || localUrl || DEFAULT_SUPABASE_URL).trim();
+  const anonKey = (envKey || localKey || DEFAULT_SUPABASE_ANON_KEY).trim();
 
   return { url, anonKey };
 }
