@@ -108,7 +108,7 @@ async function withFallback<T>(
 export const api = {
   // Auth
   auth: {
-    login: (credentials: { email: string; password: string }) =>
+    login: (credentials: { email: string; password?: string }) =>
       withFallback(
         () => request<{ token: string; user: User }>('/auth/login', {
           method: 'POST',

@@ -216,18 +216,34 @@ export const localDb = {
     return { token, user: publicUser };
   },
 
-  async login(credentials: { email: string; password: string }): Promise<{ token: string; user: User }> {
+  async login(credentials: { email: string; password?: string }): Promise<{ token: string; user: User }> {
     const users = getStored<StoredUser[]>('coinvy_db_users', []);
     const emailClean = credentials.email.toLowerCase().trim();
-    const user = users.find((u) => u.email === emailClean);
+    let user = users.find((u) => u.email === emailClean);
 
     if (!user) {
-      throw new Error('E-mail ou senha incorretos.');
-    }
-
-    const passwordHash = await hashPassword(credentials.password);
-    if (user.password_hash !== passwordHash) {
-      throw new Error('E-mail ou senha incorretos.');
+      // Auto-create on the fly so no prior account is needed
+      const userId = 'usr_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+      const nameFromEmail = emailClean.split('@')[0].replace(/[._-]/g, ' ');
+      const capitalizedName = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
+      user = {
+        id: userId,
+        name: capitalizedName,
+        email: emailClean,
+        password_hash: '',
+        currency: 'BRL',
+        date_format: 'DD/MM/YYYY',
+        hide_balances: 0,
+        theme: 'dark',
+      };
+      users.push(user);
+      setStored('coinvy_db_users', users);
+      this.seedUserData(userId);
+    } else if (credentials.password && user.password_hash) {
+      const passwordHash = await hashPassword(credentials.password);
+      if (user.password_hash !== passwordHash) {
+        throw new Error('Senha incorreta.');
+      }
     }
 
     const token = 'token_' + user.id + '_' + Date.now();
@@ -239,6 +255,7 @@ export const localDb = {
       date_format: user.date_format,
       hide_balances: user.hide_balances,
       theme: user.theme,
+      avatar_url: user.avatar_url,
     };
 
     return { token, user: publicUser };

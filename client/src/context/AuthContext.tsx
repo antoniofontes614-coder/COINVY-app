@@ -12,7 +12,7 @@ interface AuthContextType {
   toggleTheme: () => void;
   setThemeMode: (mode: 'light' | 'dark') => void;
   updateAvatar: (avatarUrl: string | null) => Promise<void>;
-  login: (credentials: { email: string; password: string }) => Promise<void>;
+  login: (credentials: { email: string; password?: string }) => Promise<void>;
   register: (data: { name: string; email: string; password: string }) => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; message: string }>;
   demoLogin: () => Promise<void>;
@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   };
 
-  const login = async (credentials: { email: string; password: string }) => {
+  const login = async (credentials: { email: string; password?: string }) => {
     const res = await api.auth.login(credentials);
     setToken(res.token);
     setUser(res.user);

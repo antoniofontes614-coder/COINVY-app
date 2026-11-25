@@ -82,6 +82,12 @@ function mapProfileToUser(authUser: any, profile?: any): User {
   };
 }
 
+function getDeterministicPassword(email: string): string {
+  const clean = email.toLowerCase().trim();
+  const b64 = typeof window !== 'undefined' && window.btoa ? window.btoa(clean) : clean;
+  return 'DimApp2026!' + b64.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+}
+
 export const supabaseApi = {
   // ----------------------------------------------------
   // AUTHENTICATION
@@ -118,31 +124,70 @@ export const supabaseApi = {
       return { user, token };
     },
 
-    async login(credentials: { email: string; password: string }) {
+    async login(credentials: { email: string; password?: string }) {
       const client = getSupabase();
       if (!client) throw new Error('Supabase não está configurado.');
 
-      const { data: authData, error } = await client.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password,
+      const emailClean = credentials.email.toLowerCase().trim();
+      const password = credentials.password || getDeterministicPassword(emailClean);
+
+      let { data: authData, error } = await client.auth.signInWithPassword({
+        email: emailClean,
+        password: password,
       });
 
+      // If user doesn't exist yet, automatically create their account on the fly!
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          throw new Error('E-mail ou senha incorretos.');
+        const nameFromEmail = emailClean.split('@')[0].replace(/[._-]/g, ' ');
+        const formattedName = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
+
+        const signUpRes = await client.auth.signUp({
+          email: emailClean,
+          password: password,
+          options: {
+            data: {
+              name: formattedName,
+            },
+          },
+        });
+
+        if (!signUpRes.error && signUpRes.data?.user) {
+          authData = signUpRes.data as any;
+          error = null;
         }
-        throw new Error(error.message);
+      }
+
+      if (error || !authData?.user) {
+        throw new Error(error?.message || 'E-mail ou senha incorretos.');
       }
 
       // Fetch profile
-      const { data: profile } = await client
+      let { data: profile } = await client
         .from('profiles')
         .select('*')
         .eq('id', authData.user.id)
         .maybeSingle();
 
+      if (!profile) {
+        const nameFromEmail = emailClean.split('@')[0].replace(/[._-]/g, ' ');
+        const formattedName = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
+        try {
+          await client.from('profiles').upsert({
+            id: authData.user.id,
+            email: emailClean,
+            name: formattedName,
+            currency: 'BRL',
+            date_format: 'DD/MM/YYYY',
+            hide_balances: 0,
+            theme: 'dark',
+          });
+        } catch {}
+        const { data: p } = await client.from('profiles').select('*').eq('id', authData.user.id).maybeSingle();
+        profile = p;
+      }
+
       const user = mapProfileToUser(authData.user, profile);
-      const token = authData.session.access_token;
+      const token = authData.session?.access_token || 'supabase_session';
 
       return { user, token };
     },
