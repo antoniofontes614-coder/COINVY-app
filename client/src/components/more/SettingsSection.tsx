@@ -385,13 +385,13 @@ export const SettingsSection: React.FC = () => {
 
         <div className="pt-4 text-center select-none opacity-80 hover:opacity-100 transition-opacity">
           <div className="flex items-center justify-center gap-2">
-            <img src="/coinvy-logo.png" alt="DIM+" className="w-6 h-6 rounded-lg object-cover" />
+            <img src="/dim-logo.png" alt="DIM+" className="w-6 h-6 rounded-lg object-cover" />
             <span className="font-extrabold text-xs tracking-tight text-slate-800 dark:text-slate-200">
               DIM<span className="text-emerald-500">+</span>
             </span>
           </div>
           <p className="text-[10px] text-slate-400 mt-1">
-            Inteligência para cuidar do seu dinheiro. • Versão 2.0
+            Seu dinheiro, sob controle. • Versão 2.0
           </p>
         </div>
       </div>

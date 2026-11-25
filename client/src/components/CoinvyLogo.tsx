@@ -17,31 +17,24 @@ export const CoinvyLogo: React.FC<CoinvyLogoProps> = ({
   const iconSizes = {
     sm: 'w-7 h-7',
     md: 'w-9 h-9',
-    lg: 'w-14 h-14',
-    xl: 'w-20 h-20',
+    lg: 'w-16 h-16',
+    xl: 'w-32 h-32 sm:w-36 sm:h-36',
   };
 
   const textSizes = {
     sm: 'text-base',
     md: 'text-xl',
-    lg: 'text-3xl',
-    xl: 'text-4xl',
+    lg: 'text-2xl',
+    xl: 'text-3xl',
   };
 
-  const sloganSizes = {
-    sm: 'text-[9px]',
-    md: 'text-[11px]',
-    lg: 'text-xs',
-    xl: 'text-sm',
-  };
-
-  // The official app icon with the stylized 3D Coin C and ascending chart arrow
+  // The official DIM+ app badge with 3D arrow, DIM+ lettering and glowing neon frame
   const AppIcon = (
     <div
-      className={`relative rounded-2xl overflow-hidden shrink-0 shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-500/20 ${iconSizes[size]}`}
+      className={`relative rounded-2xl overflow-hidden shrink-0 shadow-lg shadow-emerald-950/40 select-none ${iconSizes[size]}`}
     >
       <img
-        src="/coinvy-logo.png"
+        src="/dim-logo.png"
         alt="DIM+"
         className="w-full h-full object-cover object-center select-none"
       />
@@ -55,20 +48,13 @@ export const CoinvyLogo: React.FC<CoinvyLogoProps> = ({
   if (variant === 'full') {
     return (
       <div className={`flex flex-col items-center text-center ${className}`}>
-        {AppIcon}
-        <div className="mt-3 flex items-center justify-center tracking-tight font-extrabold select-none">
-          <span className={`text-slate-900 dark:text-white ${textSizes[size]}`}>
-            DIM
-          </span>
-          <span className={`text-emerald-500 dark:text-emerald-400 ${textSizes[size]}`}>
-            +
-          </span>
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-emerald-500/25 select-none w-36 h-36 sm:w-40 sm:h-40 border border-emerald-500/30">
+          <img
+            src="/dim-logo.png"
+            alt="DIM+ — Seu dinheiro, sob controle."
+            className="w-full h-full object-cover object-center select-none"
+          />
         </div>
-        {showSlogan && (
-          <p className={`text-slate-500 dark:text-slate-400 font-medium mt-0.5 tracking-normal ${sloganSizes[size]}`}>
-            Inteligência para cuidar do seu dinheiro.
-          </p>
-        )}
       </div>
     );
   }
@@ -88,7 +74,7 @@ export const CoinvyLogo: React.FC<CoinvyLogoProps> = ({
         </div>
         {showSlogan && (
           <span className="text-[10px] text-slate-400 dark:text-slate-400 font-medium mt-0.5 leading-tight">
-            Inteligência para cuidar do seu dinheiro.
+            Seu dinheiro, sob controle.
           </span>
         )}
       </div>
