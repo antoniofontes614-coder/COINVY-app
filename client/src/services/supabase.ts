@@ -797,5 +797,26 @@ export const supabaseApi = {
         recentTransactions,
       };
     },
+
+    async resetData(): Promise<{ success: boolean; message: string }> {
+      const client = getSupabase();
+      if (!client) throw new Error('Supabase não conectado');
+      const { data: { user } } = await client.auth.getUser();
+      const userId = user?.id;
+      if (!userId) throw new Error('Usuário não autenticado');
+
+      await client.from('transactions').delete().eq('user_id', userId);
+      await client.from('recurring_rules').delete().eq('user_id', userId);
+      await client.from('budgets').delete().eq('user_id', userId);
+      await client.from('goals').delete().eq('user_id', userId);
+      await client.from('accounts').update({ current_balance: 0, initial_balance: 0 }).eq('user_id', userId);
+
+      try {
+        const { localDb } = await import('./storage');
+        localDb.resetData();
+      } catch {}
+
+      return { success: true, message: 'Todos os lançamentos e saldos foram zerados com sucesso!' };
+    },
   },
 };

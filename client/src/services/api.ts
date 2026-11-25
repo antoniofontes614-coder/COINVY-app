@@ -471,7 +471,7 @@ export const api = {
     resetData: () =>
       withFallback(
         () => request<{ success: boolean; message: string }>('/reports/reset-data', { method: 'POST' }),
-        async () => ({ success: true, message: 'Dados resetados' }),
+        () => supabaseApi.reports.resetData(),
         () => localDb.resetData()
       ),
     loadDemo: () =>

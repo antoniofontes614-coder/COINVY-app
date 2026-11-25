@@ -12,7 +12,10 @@ import {
   LogOut,
   ShieldCheck,
   CheckCircle2,
-  Database
+  Database,
+  AlertTriangle,
+  RotateCcw,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
@@ -31,6 +34,9 @@ export const SettingsSection: React.FC = () => {
   const [nameSavedSuccess, setNameSavedSuccess] = useState(false);
   const [dataMessage, setDataMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const isSupabaseActive = isSupabaseConfigured();
 
   const handleUpdateName = async (e: React.FormEvent) => {
@@ -118,16 +124,22 @@ export const SettingsSection: React.FC = () => {
     }
   };
 
-  const handleResetData = async () => {
-    if (window.confirm('ATENÇÃO: Deseja apagar todas as movimentações, metas e orçamentos para começar totalmente do zero? Esta ação não pode ser desfeita.')) {
-      try {
-        const res = await api.reports.resetData();
-        setDataMessage({ text: res.message, type: 'success' });
-        await refreshData();
-      } catch (err: any) {
-        setDataMessage({ text: err.message, type: 'error' });
-      }
+  const handleConfirmResetData = async () => {
+    setIsResetting(true);
+    try {
+      const res = await api.reports.resetData();
+      setDataMessage({ text: res.message || 'Todos os dados foram zerados com sucesso!', type: 'success' });
+      setShowResetModal(false);
+      await refreshData();
+    } catch (err: any) {
+      setDataMessage({ text: err.message || 'Erro ao zerar dados.', type: 'error' });
+    } finally {
+      setIsResetting(false);
     }
+  };
+
+  const handleResetData = () => {
+    setShowResetModal(true);
   };
 
   return (
@@ -364,19 +376,70 @@ export const SettingsSection: React.FC = () => {
           </button>
 
           <button
-            onClick={handleResetData}
+            onClick={() => setShowResetModal(true)}
             className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors flex items-center gap-1.5"
           >
             <Trash2 size={14} />
-            <span>Limpar Todos os Lançamentos</span>
+            <span>Zerar Todos os Lançamentos</span>
           </button>
         </div>
       </div>
 
-      {/* Logout button */}
+      {/* Zona de Gerenciamento & Segurança: Zerar Dados e Sair */}
+      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-rose-500 flex items-center gap-1.5">
+          <AlertTriangle size={15} />
+          Gerenciamento da Conta & Dados
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Opções para zerar o aplicativo e começar do início ou desconectar sua conta com segurança.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {/* Zerar Dados */}
+          <button
+            type="button"
+            onClick={() => setShowResetModal(true)}
+            className="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 hover:bg-rose-100/60 dark:hover:bg-rose-950/40 text-left transition-all group flex items-start gap-3"
+          >
+            <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <RotateCcw size={20} />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                Zerar o Aplicativo
+              </h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Apaga movimentações e zera saldos para recomeçar
+              </p>
+            </div>
+          </button>
+
+          {/* Sair do App */}
+          <button
+            type="button"
+            onClick={() => setShowLogoutModal(true)}
+            className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-all group flex items-start gap-3"
+          >
+            <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+              <LogOut size={20} />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                Sair do Aplicativo
+              </h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Desconectar com segurança deste dispositivo
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Brand footer */}
       <div className="pt-2 flex flex-col items-center justify-center space-y-4">
         <button
-          onClick={logout}
+          onClick={() => setShowLogoutModal(true)}
           className="px-6 py-2.5 rounded-2xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold flex items-center gap-2 transition-all active:scale-95"
         >
           <LogOut size={16} />
@@ -395,6 +458,105 @@ export const SettingsSection: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Modal de Confirmação para Zerar Dados */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <AlertTriangle size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Zerar Dados do Aplicativo?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Ação definitiva de limpeza
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-2xl space-y-2 text-xs text-rose-800 dark:text-rose-200">
+              <p className="font-semibold">Esta ação irá apagar com segurança:</p>
+              <ul className="list-disc pl-4 space-y-1 text-[11px] text-rose-700 dark:text-rose-300">
+                <li>Todas as movimentações (receitas, despesas e transferências)</li>
+                <li>Os saldos de todas as contas voltarão para R$ 0,00</li>
+                <li>Orçamentos e metas financeiras serão reiniciados</li>
+              </ul>
+              <p className="text-[11px] font-bold pt-1">
+                Suas contas e categorias continuarão cadastradas para você começar a usar do zero.
+              </p>
+            </div>
+
+            <div className="flex gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                disabled={isResetting}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmResetData}
+                disabled={isResetting}
+                className="flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 active:scale-98"
+              >
+                <Trash2 size={15} />
+                <span>{isResetting ? 'Zerando dados...' : 'Sim, Zerar Tudo'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Sair do App */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <LogOut size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Deseja Sair do Aplicativo?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Desconectar sua sessão atual
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Você será desconectado com segurança do <strong>DIM+</strong>. Todos os seus dados continuarão salvos na sua conta e você poderá entrar novamente a qualquer momento com seu e-mail e senha.
+            </p>
+
+            <div className="flex gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoutModal(false);
+                  logout();
+                }}
+                className="flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 active:scale-98"
+              >
+                <LogOut size={15} />
+                <span>Sim, Sair do App</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <SupabaseModal
         isOpen={isSupabaseModalOpen}

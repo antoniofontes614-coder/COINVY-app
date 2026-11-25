@@ -5,7 +5,9 @@ import {
   Sun,
   Moon,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  LogOut,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFinance } from '../context/FinanceContext';
@@ -16,10 +18,11 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = () => {
-  const { user, hideBalances, toggleHideBalances, theme, toggleTheme } = useAuth();
+  const { user, hideBalances, toggleHideBalances, theme, toggleTheme, logout } = useAuth();
   const { period, setPeriod, customDateRange, setCustomDateRange } = useFinance();
   const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
   const [showCustomRangeModal, setShowCustomRangeModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [tempStart, setTempStart] = useState(customDateRange.start);
   const [tempEnd, setTempEnd] = useState(customDateRange.end);
@@ -120,10 +123,65 @@ export const Navbar: React.FC<NavbarProps> = () => {
                 {user.name.charAt(0).toUpperCase()}
               </div>
             )}
+
+            {/* Sair do App Button */}
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              title="Sair do aplicativo"
+              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all ml-0.5"
+            >
+              <LogOut size={17} />
+            </button>
           </div>
 
         </div>
       </header>
+
+      {/* Modal de Confirmação para Sair do App */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <LogOut size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Deseja Sair do Aplicativo?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Desconectar sua sessão com segurança
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Você será desconectado com segurança do <strong>DIM+</strong>. Todos os seus dados continuam salvos na nuvem e você poderá entrar novamente a qualquer momento com seu e-mail e senha.
+            </p>
+
+            <div className="flex gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  logout();
+                }}
+                className="flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 active:scale-98"
+              >
+                <LogOut size={15} />
+                <span>Sim, Sair do App</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Custom Date Range Modal */}
       {showCustomRangeModal && (
