@@ -5,14 +5,10 @@ import {
   ShieldCheck,
   TrendingUp,
   PieChart,
-  Database,
-  CheckCircle2,
   AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CoinvyLogo } from '../components/CoinvyLogo';
-import { SupabaseModal } from '../components/SupabaseModal';
-import { isSupabaseConfigured } from '../services/supabase';
 
 export const AuthPage: React.FC = () => {
   const { login } = useAuth();
@@ -20,8 +16,6 @@ export const AuthPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
-  const isSupabaseActive = isSupabaseConfigured();
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +23,7 @@ export const AuthPage: React.FC = () => {
 
     const cleanEmail = email.trim();
     if (!cleanEmail) {
-      setErrorMessage('Por favor, digite seu Gmail ou e-mail de acesso.');
+      setErrorMessage('Por favor, digite o mesmo e-mail que você utilizou na compra.');
       return;
     }
 
@@ -65,7 +59,7 @@ export const AuthPage: React.FC = () => {
             Acessar DIM+
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Digite seu Gmail para entrar no aplicativo
+            Digite o mesmo e-mail utilizado na compra para entrar
           </p>
         </div>
 
@@ -77,11 +71,11 @@ export const AuthPage: React.FC = () => {
           </div>
         )}
 
-        {/* GMAIL ACCESS FORM */}
+        {/* ACCESS FORM */}
         <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div>
             <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-              Seu Gmail
+              E-mail da Compra
             </label>
             <div className="relative">
               <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -113,43 +107,15 @@ export const AuthPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Notice: No account needed / No password needed */}
+        {/* Notice: Use the purchase email / No password or registration needed */}
         <div className="p-3.5 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40 rounded-2xl flex items-start gap-2.5 text-left">
           <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-            <strong className="text-emerald-700 dark:text-emerald-300">Acesso direto:</strong> Não é necessário senha nem cadastro prévio. Basta digitar seu Gmail e você já entra imediatamente no seu DIM+.
+            <strong className="text-emerald-700 dark:text-emerald-300">Importante:</strong> Acesse com o <strong>mesmo e-mail que você utilizou na compra</strong>. Não é necessário senha nem cadastro prévio: basta digitar seu e-mail e seu acesso é liberado imediatamente.
           </p>
         </div>
 
-        {/* Supabase Cloud Connection Status */}
-        <div className="pt-1">
-          <button
-            type="button"
-            onClick={() => setIsSupabaseModalOpen(true)}
-            className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs flex items-center justify-between transition-all"
-          >
-            <div className="flex items-center gap-2">
-              <Database size={14} className={isSupabaseActive ? 'text-emerald-500' : 'text-slate-400'} />
-              <span className="text-[11px]">Conexão Nuvem (Supabase)</span>
-            </div>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                isSupabaseActive
-                  ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              {isSupabaseActive ? 'Conectado' : 'Configurar'}
-            </span>
-          </button>
-        </div>
-
       </div>
-
-      <SupabaseModal
-        isOpen={isSupabaseModalOpen}
-        onClose={() => setIsSupabaseModalOpen(false)}
-      />
 
       {/* Feature highlights footer */}
       <div className="mt-8 grid grid-cols-3 gap-4 max-w-sm text-center text-[11px] text-slate-500 dark:text-slate-400">
