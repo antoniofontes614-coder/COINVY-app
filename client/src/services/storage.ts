@@ -244,6 +244,13 @@ export const localDb = {
     return { token, user: publicUser };
   },
 
+  async resetPassword(email: string): Promise<{ success: boolean; message: string }> {
+    return {
+      success: true,
+      message: 'Instruções para redefinir sua senha foram enviadas para o seu e-mail.',
+    };
+  },
+
   async demo(): Promise<{ token: string; user: User; isDemo: boolean }> {
     const demoEmail = 'demo@coinvy.com.br';
     const users = getStored<StoredUser[]>('coinvy_db_users', []);

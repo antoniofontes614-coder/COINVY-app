@@ -126,6 +126,15 @@ export const api = {
         () => supabaseApi.auth.register(data),
         () => localDb.register(data)
       ),
+    resetPassword: (email: string) =>
+      withFallback(
+        () => request<{ success: boolean; message: string }>('/auth/forgot-password', {
+          method: 'POST',
+          body: JSON.stringify({ email }),
+        }),
+        () => supabaseApi.auth.resetPassword(email),
+        () => localDb.resetPassword(email)
+      ),
     demo: () =>
       withFallback(
         () => request<{ token: string; user: User; isDemo: boolean }>('/auth/demo', {

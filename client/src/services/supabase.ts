@@ -147,6 +147,24 @@ export const supabaseApi = {
       return { user, token };
     },
 
+    async resetPassword(email: string): Promise<{ success: boolean; message: string }> {
+      const client = getSupabase();
+      if (!client) throw new Error('Supabase não está configurado.');
+
+      const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/`,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return {
+        success: true,
+        message: 'Link de recuperação de senha enviado com sucesso! Verifique sua caixa de entrada.',
+      };
+    },
+
     async me() {
       const client = getSupabase();
       if (!client) throw new Error('Supabase não está configurado.');

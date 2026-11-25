@@ -14,6 +14,7 @@ interface AuthContextType {
   updateAvatar: (avatarUrl: string | null) => Promise<void>;
   login: (credentials: { email: string; password: string }) => Promise<void>;
   register: (data: { name: string; email: string; password: string }) => Promise<void>;
+  resetPassword: (email: string) => Promise<{ success: boolean; message: string }>;
   demoLogin: () => Promise<void>;
   logout: () => void;
   updateUser: (data: Partial<User>) => Promise<void>;
@@ -127,6 +128,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('coinvy_user', JSON.stringify(res.user));
   };
 
+  const resetPassword = async (email: string) => {
+    return await api.auth.resetPassword(email);
+  };
+
   const demoLogin = async () => {
     const res = await api.auth.demo();
     setToken(res.token);
@@ -181,6 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateAvatar,
         login,
         register,
+        resetPassword,
         demoLogin,
         logout,
         updateUser,
