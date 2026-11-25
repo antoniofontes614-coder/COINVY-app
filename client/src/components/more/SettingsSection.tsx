@@ -33,8 +33,9 @@ export const SettingsSection: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name || '');
-  const [isUpdatingName, setIsUpdatingName] = useState(false);
-  const [nameSavedSuccess, setNameSavedSuccess] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(user?.avatar_url || null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [dataMessage, setDataMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -42,12 +43,15 @@ export const SettingsSection: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
   const isSupabaseActive = isSupabaseConfigured();
 
-  // Keep local name in sync if user updates
+  // Keep local fields in sync when user updates
   useEffect(() => {
     if (user?.name) {
       setName(user.name);
     }
-  }, [user?.name]);
+    if (user?.avatar_url !== undefined) {
+      setPhotoPreview(user.avatar_url);
+    }
+  }, [user?.name, user?.avatar_url]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -85,10 +89,11 @@ export const SettingsSection: React.FC = () => {
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setPhotoPreview(dataUrl);
           updateAvatar(dataUrl);
-          setDataMessage({ text: 'Foto de perfil atualizada com sucesso!', type: 'success' });
-          setNameSavedSuccess(true);
-          setTimeout(() => setNameSavedSuccess(false), 3000);
+          setDataMessage({ text: 'Foto carregada! Clique em "Salvar Perfil" para confirmar todas as alterações.', type: 'success' });
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 3500);
         }
       };
       img.src = readerEvent.target?.result as string;
@@ -96,26 +101,35 @@ export const SettingsSection: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleRemovePhoto = () => {
+  const handleRemovePhoto = async () => {
     if (window.confirm('Deseja remover sua foto de perfil e voltar para a inicial do seu nome?')) {
-      updateAvatar(null);
+      setPhotoPreview(null);
+      await updateAvatar(null);
       setDataMessage({ text: 'Foto de perfil removida com sucesso!', type: 'success' });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     }
   };
 
-  const handleUpdateName = async (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    setIsUpdatingName(true);
+    if (!name.trim()) {
+      setDataMessage({ text: 'Por favor, informe seu nome.', type: 'error' });
+      return;
+    }
+    setIsSaving(true);
     try {
-      await updateUser({ name: name.trim() });
-      setDataMessage({ text: 'Nome atualizado com sucesso!', type: 'success' });
-      setNameSavedSuccess(true);
-      setTimeout(() => setNameSavedSuccess(false), 3000);
+      await updateUser({
+        name: name.trim(),
+        avatar_url: photoPreview,
+      });
+      setDataMessage({ text: 'Perfil salvo com sucesso (nome e foto atualizados)!', type: 'success' });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err: any) {
-      setDataMessage({ text: 'Erro ao atualizar nome: ' + err.message, type: 'error' });
+      setDataMessage({ text: 'Erro ao salvar perfil: ' + err.message, type: 'error' });
     } finally {
-      setIsUpdatingName(false);
+      setIsSaving(false);
     }
   };
 
@@ -233,78 +247,83 @@ export const SettingsSection: React.FC = () => {
 
       {/* Profile Card */}
       <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xs space-y-5">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-          Perfil do Usuário
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Perfil do Usuário
+          </h3>
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60">
+            DIM+ Oficial
+          </span>
+        </div>
 
-        {/* Avatar / Photo Upload Section */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="relative group shrink-0">
-            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500 shadow-md bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-800 dark:text-emerald-200 font-extrabold text-2xl select-none">
-              {user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span>{(user?.name || 'U').charAt(0).toUpperCase()}</span>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              title="Alterar foto de perfil"
-              className="absolute bottom-0 right-0 p-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-transform active:scale-90"
-            >
-              <Camera size={14} />
-            </button>
-          </div>
-
-          <div className="flex-1 text-center sm:text-left space-y-2">
-            <div>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                Foto de Perfil
-              </h4>
-              <p className="text-xs text-slate-400">
-                Adicione sua foto para personalizar seu perfil no DIM+
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                className="hidden"
-              />
+        <form onSubmit={handleSaveProfile} className="space-y-5">
+          {/* Avatar / Photo Upload Section */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="relative group shrink-0">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500 shadow-md bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-800 dark:text-emerald-200 font-extrabold text-2xl select-none">
+                {photoPreview ? (
+                  <img
+                    src={photoPreview}
+                    alt={name || user?.name || 'Foto'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{((name || user?.name || 'U').trim()).charAt(0).toUpperCase()}</span>
+                )}
+              </div>
 
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                title="Alterar foto de perfil"
+                className="absolute bottom-0 right-0 p-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-transform active:scale-90"
               >
-                <Upload size={13} />
-                <span>{user?.avatar_url ? 'Trocar Foto' : 'Adicionar Foto'}</span>
+                <Camera size={14} />
               </button>
+            </div>
 
-              {user?.avatar_url && (
+            <div className="flex-1 text-center sm:text-left space-y-2">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Foto de Perfil
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Adicione sua foto para personalizar seu perfil no DIM+
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+
                 <button
                   type="button"
-                  onClick={handleRemovePhoto}
-                  className="px-3.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
                 >
-                  <Trash2 size={13} />
-                  <span>Remover Foto</span>
+                  <Upload size={13} />
+                  <span>{photoPreview ? 'Trocar Foto' : 'Adicionar Foto'}</span>
                 </button>
-              )}
+
+                {photoPreview && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="px-3.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  >
+                    <Trash2 size={13} />
+                    <span>Remover Foto</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        <form onSubmit={handleUpdateName} className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-slate-500 block mb-1">
@@ -331,19 +350,24 @@ export const SettingsSection: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-1">
-            {nameSavedSuccess ? (
-              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 size={14} /> Dados atualizados com sucesso!
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+            {saveSuccess ? (
+              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 animate-in fade-in">
+                <CheckCircle2 size={15} /> Perfil salvo com sucesso!
               </span>
-            ) : <span />}
+            ) : (
+              <span className="text-[11px] text-slate-400">
+                Altere seu nome e foto e clique em Salvar Perfil
+              </span>
+            )}
 
             <button
               type="submit"
-              disabled={isUpdatingName}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+              disabled={isSaving}
+              className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 flex items-center justify-center gap-1.5"
             >
-              {isUpdatingName ? 'Salvando...' : 'Salvar Nome'}
+              <CheckCircle2 size={15} />
+              <span>{isSaving ? 'Salvando...' : 'Salvar Perfil'}</span>
             </button>
           </div>
         </form>

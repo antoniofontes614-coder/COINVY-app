@@ -187,14 +187,44 @@ export const supabaseApi = {
       if (updates.theme !== undefined) profilePayload.theme = updates.theme;
       if (updates.avatar_url !== undefined) profilePayload.avatar_url = updates.avatar_url;
 
-      const { data, error } = await client
-        .from('profiles')
-        .upsert({ id: authUser.id, email: authUser.email, ...profilePayload })
-        .select()
-        .single();
+      // Update auth user_metadata so it persists in auth schema as well
+      if (updates.name !== undefined || updates.avatar_url !== undefined) {
+        const metadataUpdates: any = {};
+        if (updates.name !== undefined) metadataUpdates.name = updates.name;
+        if (updates.avatar_url !== undefined) metadataUpdates.avatar_url = updates.avatar_url;
+        await client.auth.updateUser({ data: metadataUpdates }).catch(() => {});
+      }
 
-      if (error) throw new Error(error.message);
-      return { user: mapProfileToUser(authUser, data) };
+      // Check if profile exists first to update only changed fields without nullifying other columns
+      const { data: existing } = await client
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      let resData: any = null;
+      if (existing) {
+        const { data, error } = await client
+          .from('profiles')
+          .update(profilePayload)
+          .eq('id', authUser.id)
+          .select()
+          .single();
+
+        if (error) throw new Error(error.message);
+        resData = data;
+      } else {
+        const { data, error } = await client
+          .from('profiles')
+          .insert({ id: authUser.id, email: authUser.email, ...profilePayload })
+          .select()
+          .single();
+
+        if (error) throw new Error(error.message);
+        resData = data;
+      }
+
+      return { user: mapProfileToUser(authUser, resData) };
     },
   },
 

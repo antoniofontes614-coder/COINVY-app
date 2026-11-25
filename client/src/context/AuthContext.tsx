@@ -147,7 +147,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUser = async (data: Partial<User>) => {
     try {
       const res = await api.auth.updateProfile(data);
-      const updated = { ...user, ...res.user, ...data };
+      const nextAvatar = data.avatar_url !== undefined 
+        ? data.avatar_url 
+        : (res.user?.avatar_url !== undefined ? res.user.avatar_url : (user?.avatar_url || null));
+      const updated = {
+        ...user,
+        ...res.user,
+        ...data,
+        avatar_url: nextAvatar,
+      };
       setUser(updated);
       localStorage.setItem('coinvy_user', JSON.stringify(updated));
     } catch {
