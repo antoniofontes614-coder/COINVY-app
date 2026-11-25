@@ -155,7 +155,7 @@ export const SupabaseModal: React.FC<SupabaseModalProps> = ({ isOpen, onClose, o
                 >
                   supabase.com <ExternalLink size={11} />
                 </a>{' '}
-                e crie um projeto gratuito chamado <strong>COINVY</strong>.
+                e crie um projeto gratuito chamado <strong>DIM+</strong>.
               </li>
               <li>
                 No painel do projeto, acesse <strong>Project Settings → API</strong>.

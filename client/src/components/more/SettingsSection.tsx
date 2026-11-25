@@ -60,7 +60,7 @@ export const SettingsSection: React.FC = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `coinvy_movimentacoes_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `dim_movimentacoes_${new Date().toISOString().slice(0, 10)}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -83,7 +83,7 @@ export const SettingsSection: React.FC = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `coinvy_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `dim_backup_${new Date().toISOString().slice(0, 10)}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -385,9 +385,9 @@ export const SettingsSection: React.FC = () => {
 
         <div className="pt-4 text-center select-none opacity-80 hover:opacity-100 transition-opacity">
           <div className="flex items-center justify-center gap-2">
-            <img src="/coinvy-logo.png" alt="COINVY" className="w-6 h-6 rounded-lg object-cover" />
+            <img src="/coinvy-logo.png" alt="DIM+" className="w-6 h-6 rounded-lg object-cover" />
             <span className="font-extrabold text-xs tracking-tight text-slate-800 dark:text-slate-200">
-              COIN<span className="text-emerald-500">VY</span>
+              DIM<span className="text-emerald-500">+</span>
             </span>
           </div>
           <p className="text-[10px] text-slate-400 mt-1">

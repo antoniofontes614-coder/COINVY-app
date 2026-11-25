@@ -179,12 +179,12 @@ export const AuthPage: React.FC = () => {
               'Aguarde...'
             ) : mode === 'login' ? (
               <>
-                <span>Acessar COINVY</span>
+                <span>Acessar DIM+</span>
                 <ArrowRight size={16} />
               </>
             ) : (
               <>
-                <span>Criar Minha Conta COINVY</span>
+                <span>Criar Minha Conta DIM+</span>
                 <ArrowRight size={16} />
               </>
             )}

@@ -42,7 +42,7 @@ export const CoinvyLogo: React.FC<CoinvyLogoProps> = ({
     >
       <img
         src="/coinvy-logo.png"
-        alt="COINVY"
+        alt="DIM+"
         className="w-full h-full object-cover object-center select-none"
       />
     </div>
@@ -58,10 +58,10 @@ export const CoinvyLogo: React.FC<CoinvyLogoProps> = ({
         {AppIcon}
         <div className="mt-3 flex items-center justify-center tracking-tight font-extrabold select-none">
           <span className={`text-slate-900 dark:text-white ${textSizes[size]}`}>
-            COIN
+            DIM
           </span>
           <span className={`text-emerald-500 dark:text-emerald-400 ${textSizes[size]}`}>
-            VY
+            +
           </span>
         </div>
         {showSlogan && (
@@ -80,10 +80,10 @@ export const CoinvyLogo: React.FC<CoinvyLogoProps> = ({
       <div className="flex flex-col">
         <div className="flex items-center tracking-tight font-extrabold leading-none">
           <span className={`text-slate-900 dark:text-white ${textSizes[size]}`}>
-            COIN
+            DIM
           </span>
           <span className={`text-emerald-500 dark:text-emerald-400 ${textSizes[size]}`}>
-            VY
+            +
           </span>
         </div>
         {showSlogan && (

@@ -134,7 +134,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
               </div>
               <div>
                 <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                  Seus Primeiros Passos na COINVY
+                  Seus Primeiros Passos no DIM+
                 </h2>
                 <p className="text-xs text-slate-600 dark:text-slate-400">
                   Veja como é rápido organizar suas finanças em menos de 1 minuto:
