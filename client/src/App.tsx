@@ -32,7 +32,7 @@ const MainApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-emerald-100 selection:text-emerald-900 transition-colors">
-      <Navbar currentTab={currentTab} />
+      <Navbar currentTab={currentTab} onNavigateTab={setCurrentTab} />
 
       <main className="flex-1 max-w-5xl w-full mx-auto p-2 sm:p-4 animate-in fade-in duration-150">
         {currentTab === 'inicio' && <DashboardPage onNavigateTab={setCurrentTab} />}

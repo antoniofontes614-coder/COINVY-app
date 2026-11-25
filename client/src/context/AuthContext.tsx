@@ -37,8 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const savedTheme = (localStorage.getItem('coinvy_theme') || localStorage.getItem('nexo_theme')) as 'light' | 'dark' | null;
-    if (savedTheme) return savedTheme;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return savedTheme || 'dark';
   });
 
   // Apply theme to html root

@@ -1,32 +1,31 @@
 import React, { useState } from 'react';
 import {
+  User,
+  Wallet,
+  Tag,
   Target,
   Trophy,
-  Wallet,
-  Repeat,
-  Tag,
-  Settings,
-  ChevronRight
+  Repeat
 } from 'lucide-react';
+import { SettingsSection } from '../components/more/SettingsSection';
+import { AccountsSection } from '../components/more/AccountsSection';
+import { CategoriesSection } from '../components/more/CategoriesSection';
 import { BudgetsSection } from '../components/more/BudgetsSection';
 import { GoalsSection } from '../components/more/GoalsSection';
-import { AccountsSection } from '../components/more/AccountsSection';
 import { RecurringSection } from '../components/more/RecurringSection';
-import { CategoriesSection } from '../components/more/CategoriesSection';
-import { SettingsSection } from '../components/more/SettingsSection';
 
 export const MorePage: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<
-    'budgets' | 'goals' | 'accounts' | 'recurring' | 'categories' | 'settings'
-  >('budgets');
+    'settings' | 'accounts' | 'categories' | 'budgets' | 'goals' | 'recurring'
+  >('settings');
 
   const navItems = [
+    { id: 'settings', label: 'Meu Perfil', icon: User },
+    { id: 'accounts', label: 'Contas', icon: Wallet },
+    { id: 'categories', label: 'Categorias', icon: Tag },
     { id: 'budgets', label: 'Orçamentos', icon: Target },
     { id: 'goals', label: 'Metas', icon: Trophy },
-    { id: 'accounts', label: 'Contas', icon: Wallet },
     { id: 'recurring', label: 'Recorrências', icon: Repeat },
-    { id: 'categories', label: 'Categorias', icon: Tag },
-    { id: 'settings', label: 'Ajustes', icon: Settings },
   ] as const;
 
   return (
@@ -56,12 +55,12 @@ export const MorePage: React.FC = () => {
 
       {/* Dynamic Sub-tab View */}
       <div className="animate-in fade-in duration-200">
+        {activeSubTab === 'settings' && <SettingsSection />}
+        {activeSubTab === 'accounts' && <AccountsSection />}
+        {activeSubTab === 'categories' && <CategoriesSection />}
         {activeSubTab === 'budgets' && <BudgetsSection />}
         {activeSubTab === 'goals' && <GoalsSection />}
-        {activeSubTab === 'accounts' && <AccountsSection />}
         {activeSubTab === 'recurring' && <RecurringSection />}
-        {activeSubTab === 'categories' && <CategoriesSection />}
-        {activeSubTab === 'settings' && <SettingsSection />}
       </div>
 
     </div>

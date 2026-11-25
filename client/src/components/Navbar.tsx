@@ -15,9 +15,10 @@ import { CoinvyLogo } from './CoinvyLogo';
 
 interface NavbarProps {
   currentTab: string;
+  onNavigateTab?: (tab: string) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = () => {
+export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigateTab }) => {
   const { user, hideBalances, toggleHideBalances, theme, toggleTheme, logout } = useAuth();
   const { period, setPeriod, customDateRange, setCustomDateRange } = useFinance();
   const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
@@ -114,11 +115,13 @@ export const Navbar: React.FC<NavbarProps> = () => {
               {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
             </button>
 
-            {/* User initial avatar or uploaded photo */}
+            {/* User initial avatar or uploaded photo - Click opens Perfil */}
             {user && (
-              <div
-                title={user.name}
-                className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center border border-emerald-400/60 select-none ml-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold text-xs shrink-0"
+              <button
+                type="button"
+                onClick={() => onNavigateTab?.('perfil')}
+                title="Acessar Meu Perfil e Configurações"
+                className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center border-2 border-emerald-400 select-none ml-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-extrabold text-xs shrink-0 hover:scale-110 active:scale-95 transition-all shadow-sm shadow-emerald-500/20 cursor-pointer"
               >
                 {user.avatar_url ? (
                   <img
@@ -129,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
                 ) : (
                   <span>{user.name.charAt(0).toUpperCase()}</span>
                 )}
-              </div>
+              </button>
             )}
 
             {/* Sair do App Button */}

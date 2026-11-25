@@ -4,7 +4,7 @@ import {
   Receipt,
   Plus,
   PieChart,
-  SlidersHorizontal
+  User
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 
@@ -71,7 +71,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onTabChange })
           <span className="text-[10px] mt-1 tracking-tight">Relatórios</span>
         </button>
 
-        {/* Tab 5: Mais (Perfil & Gestão) */}
+        {/* Tab 5: Perfil */}
         <button
           onClick={() => onTabChange('perfil')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
@@ -80,8 +80,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onTabChange })
               : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
         >
-          <SlidersHorizontal size={20} className={currentTab === 'perfil' ? 'stroke-[2.5]' : 'stroke-2'} />
-          <span className="text-[10px] mt-1 tracking-tight">Mais</span>
+          <User size={20} className={currentTab === 'perfil' ? 'stroke-[2.5]' : 'stroke-2'} />
+          <span className="text-[10px] mt-1 tracking-tight">Perfil</span>
         </button>
 
       </div>
