@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   User,
   Sun,
@@ -42,6 +42,13 @@ export const SettingsSection: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
   const isSupabaseActive = isSupabaseConfigured();
 
+  // Keep local name in sync if user updates
+  useEffect(() => {
+    if (user?.name) {
+      setName(user.name);
+    }
+  }, [user?.name]);
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -79,6 +86,7 @@ export const SettingsSection: React.FC = () => {
           ctx.drawImage(img, 0, 0, width, height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           updateAvatar(dataUrl);
+          setDataMessage({ text: 'Foto de perfil atualizada com sucesso!', type: 'success' });
           setNameSavedSuccess(true);
           setTimeout(() => setNameSavedSuccess(false), 3000);
         }
@@ -91,6 +99,7 @@ export const SettingsSection: React.FC = () => {
   const handleRemovePhoto = () => {
     if (window.confirm('Deseja remover sua foto de perfil e voltar para a inicial do seu nome?')) {
       updateAvatar(null);
+      setDataMessage({ text: 'Foto de perfil removida com sucesso!', type: 'success' });
     }
   };
 
@@ -100,10 +109,11 @@ export const SettingsSection: React.FC = () => {
     setIsUpdatingName(true);
     try {
       await updateUser({ name: name.trim() });
+      setDataMessage({ text: 'Nome atualizado com sucesso!', type: 'success' });
       setNameSavedSuccess(true);
       setTimeout(() => setNameSavedSuccess(false), 3000);
     } catch (err: any) {
-      alert('Erro ao atualizar nome: ' + err.message);
+      setDataMessage({ text: 'Erro ao atualizar nome: ' + err.message, type: 'error' });
     } finally {
       setIsUpdatingName(false);
     }

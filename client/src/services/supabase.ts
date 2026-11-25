@@ -78,6 +78,7 @@ function mapProfileToUser(authUser: any, profile?: any): User {
     date_format: profile?.date_format || 'DD/MM/YYYY',
     hide_balances: profile?.hide_balances ? 1 : 0,
     theme: profile?.theme || 'light',
+    avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url || null,
   };
 }
 
@@ -184,6 +185,7 @@ export const supabaseApi = {
       if (updates.date_format !== undefined) profilePayload.date_format = updates.date_format;
       if (updates.hide_balances !== undefined) profilePayload.hide_balances = Boolean(updates.hide_balances);
       if (updates.theme !== undefined) profilePayload.theme = updates.theme;
+      if (updates.avatar_url !== undefined) profilePayload.avatar_url = updates.avatar_url;
 
       const { data, error } = await client
         .from('profiles')
