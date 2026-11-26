@@ -440,7 +440,7 @@ export const api = {
           body: JSON.stringify(data),
         }),
         async () => ({ goal: await supabaseApi.goals.update(id, data) }),
-        () => localDb.createGoal({ id, ...data })
+        () => localDb.updateGoal(id, data)
       ),
     delete: (id: string) =>
       withFallback(

@@ -753,6 +753,29 @@ export const localDb = {
     };
   },
 
+  updateGoal(id: string, data: Partial<Goal>): { goal: Goal } {
+    const goals = getStored<Goal[]>('coinvy_db_goals', []);
+    const idx = goals.findIndex((g) => g.id === id);
+    if (idx === -1) throw new Error('Meta não encontrada.');
+
+    goals[idx] = { ...goals[idx], ...data };
+    setStored('coinvy_db_goals', goals);
+
+    const target = Number(goals[idx].target_amount) || 0;
+    const current = Number(goals[idx].current_amount) || 0;
+    const progress = target > 0 ? Math.min(100, Number(((current / target) * 100).toFixed(1))) : 0;
+    const remaining = Math.max(0, Number((target - current).toFixed(2)));
+
+    return {
+      goal: {
+        ...goals[idx],
+        progress,
+        remaining,
+        isCompleted: current >= target,
+      },
+    };
+  },
+
   deleteGoal(id: string): { success: boolean } {
     const goals = getStored<Goal[]>('coinvy_db_goals', []);
     setStored('coinvy_db_goals', goals.filter((g) => g.id !== id));

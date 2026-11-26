@@ -774,15 +774,25 @@ export const supabaseApi = {
       if (!client) throw new Error('Supabase não conectado.');
       const { data, error } = await client.from('goals').update(updates).eq('id', id).select().single();
       if (error) throw error;
-      return data;
+      const target = Number(data.target_amount);
+      const current = Number(data.current_amount);
+      return {
+        ...data,
+        target_amount: target,
+        current_amount: current,
+        progress: target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0,
+        remaining: Math.max(0, target - current),
+        isCompleted: current >= target,
+      };
     },
 
     async addProgress(id: string, amount: number): Promise<Goal> {
       const client = getSupabase();
       if (!client) throw new Error('Supabase não conectado.');
 
-      const { data: goal } = await client.from('goals').select('current_amount').eq('id', id).single();
-      const newAmount = Number(goal?.current_amount || 0) + Number(amount);
+      const { data: goal } = await client.from('goals').select('current_amount, target_amount').eq('id', id).single();
+      const currentVal = Number(goal?.current_amount || 0);
+      const newAmount = Math.max(0, Number((currentVal + Number(amount)).toFixed(2)));
 
       const { data, error } = await client
         .from('goals')
@@ -791,7 +801,16 @@ export const supabaseApi = {
         .select()
         .single();
       if (error) throw error;
-      return data;
+      const target = Number(data.target_amount || goal?.target_amount || 0);
+      const current = Number(data.current_amount);
+      return {
+        ...data,
+        target_amount: target,
+        current_amount: current,
+        progress: target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0,
+        remaining: Math.max(0, target - current),
+        isCompleted: current >= target,
+      };
     },
 
     async delete(id: string): Promise<void> {
