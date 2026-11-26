@@ -160,18 +160,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
   return (
     <div className="min-h-screen bg-[#0B1F17] text-white pb-28 pt-2 px-3 sm:px-4 max-w-md mx-auto select-none transition-colors">
       
-      {/* 1. Header Bar: DIM+ Logo on left, Notification Bell on right */}
+      {/* 1. Header Bar: Logotipo oficial DIM+ com subtítulo e Sino de Notificações */}
       <header className="flex items-center justify-between py-3 px-1">
-        <div className="flex items-center gap-1.5">
-          <span className="text-2xl font-black tracking-tight text-white flex items-center">
-            DIM<span className="text-[#00E676] drop-shadow-[0_0_12px_rgba(0,230,118,0.7)]">+</span>
-          </span>
+        <div className="flex items-center gap-2.5">
+          <img
+            src="/dim-logo.png"
+            alt="DIM+"
+            className="w-10 h-10 rounded-full object-cover border border-[#00E676]/40 shadow-[0_0_12px_rgba(0,230,118,0.35)] shrink-0"
+          />
+          <div className="flex flex-col">
+            <span className="text-lg font-black tracking-tight text-white leading-tight flex items-center">
+              DIM<span className="text-[#00E676] drop-shadow-[0_0_10px_rgba(0,230,118,0.7)]">+</span>
+            </span>
+            <span className="text-[11px] font-medium text-slate-400 leading-tight">
+              Seu dinheiro, sob controle.
+            </span>
+          </div>
         </div>
 
         <button
           type="button"
           onClick={() => setShowNotifications(true)}
-          className="relative p-2 rounded-full bg-[#1A2E24] hover:bg-[#254234] border border-[#2A4435] text-slate-200 transition-all active:scale-95 cursor-pointer"
+          className="relative p-2 rounded-full bg-[#1A2E24] hover:bg-[#254234] border border-[#2A4435] text-slate-200 transition-all active:scale-95 cursor-pointer shrink-0"
           title="Notificações"
         >
           <Bell size={19} className="text-white" />
