@@ -5,7 +5,6 @@ import {
   Moon,
   Eye,
   EyeOff,
-  FileSpreadsheet,
   FileText,
   Download,
   Trash2,
@@ -24,7 +23,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
 import { api } from '../../services/api';
 import { localDb } from '../../services/storage';
-import { exportTransactionsCSV, downloadFile } from '../../utils/export';
 import { generateDIMReportPDF } from '../../utils/pdfExport';
 
 export const SettingsSection: React.FC = () => {
@@ -156,64 +154,6 @@ export const SettingsSection: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleExportCSV = async () => {
-    try {
-      const token = localStorage.getItem('coinvy_token') || localStorage.getItem('nexo_token');
-      const res = await fetch('/api/reports/export/csv', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const contentType = res.headers.get('content-type') || '';
-      if (res.ok && !contentType.includes('text/html')) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `dim_movimentacoes_${new Date().toISOString().slice(0, 10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        return;
-      }
-    } catch {}
-
-    exportTransactionsCSV(localDb.listTransactions().transactions);
-  };
-
-  const handleExportJSON = async () => {
-    try {
-      const token = localStorage.getItem('coinvy_token') || localStorage.getItem('nexo_token');
-      const res = await fetch('/api/reports/export/json', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const contentType = res.headers.get('content-type') || '';
-      if (res.ok && !contentType.includes('text/html')) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `dim_backup_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        return;
-      }
-    } catch {}
-
-    const backup = {
-      exportDate: new Date().toISOString(),
-      version: '2.0',
-      data: {
-        user,
-        accounts: localDb.listAccounts().accounts,
-        categories: localDb.listCategories().categories,
-        transactions: localDb.listTransactions().transactions,
-        budgets: localDb.listBudgets().budgets,
-        goals: localDb.listGoals().goals,
-      },
-    };
-    downloadFile(JSON.stringify(backup, null, 2), `coinvy_backup_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
   };
 
   const handleLoadDemo = async () => {
@@ -496,8 +436,8 @@ export const SettingsSection: React.FC = () => {
         </div>
       </div>
 
-      {/* 1-Clique Relatório PDF Oficial DIM+ */}
-      <div className="p-5 bg-gradient-to-br from-[#1A2E24] to-[#12231B] border border-[#00E676]/40 rounded-3xl shadow-lg shadow-[#00E676]/5 space-y-3 relative overflow-hidden">
+      {/* Relatório Oficial em PDF (DIM+) */}
+      <div className="p-5 bg-gradient-to-br from-[#1A2E24] to-[#12231B] border border-[#00E676]/40 rounded-3xl shadow-lg shadow-[#00E676]/5 space-y-4 relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
             <div className="w-11 h-11 rounded-2xl bg-[#0B1F17] text-[#00E676] border border-[#00E676]/30 flex items-center justify-center shrink-0 shadow-inner">
@@ -506,14 +446,14 @@ export const SettingsSection: React.FC = () => {
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-white">
-                  Relatório Completo em PDF (DIM+)
+                  Relatório Oficial em PDF (DIM+)
                 </h3>
                 <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#00E676] text-black">
                   1 Clique
                 </span>
               </div>
               <p className="text-xs text-slate-300 max-w-md">
-                Baixe um documento profissional formatado com o logotipo oficial do DIM+, detalhando seu saldo, receitas, despesas por categoria e todas as movimentações.
+                Baixe um documento formatado com o logotipo oficial do DIM+, detalhando seu saldo, receitas, despesas por categoria e todas as movimentações.
               </p>
             </div>
           </div>
@@ -525,84 +465,24 @@ export const SettingsSection: React.FC = () => {
             className="px-4 py-2.5 rounded-xl bg-[#00E676] hover:bg-[#00c853] text-black text-xs font-bold transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
           >
             <Download size={15} />
-            <span>{isGeneratingPDF ? 'Gerando PDF...' : 'Baixar PDF Oficial'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Data Management & Export Card */}
-      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-          Dados, Exportação e Backup
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button
-            onClick={handleExportPDF}
-            disabled={isGeneratingPDF}
-            className="p-3.5 rounded-2xl border border-[#00E676]/40 hover:border-[#00E676] bg-[#00E676]/10 text-left flex items-center gap-3 transition-colors cursor-pointer group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] text-[#00E676] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <FileText size={20} />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                <span>Relatório PDF</span>
-                <span className="text-[9px] bg-[#00E676] text-black font-extrabold px-1.5 py-0.2 rounded-full">Top</span>
-              </h4>
-              <p className="text-[10px] text-slate-400">
-                PDF com logotipo e resumo
-              </p>
-            </div>
-          </button>
-
-          <button
-            onClick={handleExportCSV}
-            className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 bg-slate-50/50 dark:bg-slate-800/40 text-left flex items-center gap-3 transition-colors cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shrink-0">
-              <FileSpreadsheet size={20} />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                Exportar para Excel
-              </h4>
-              <p className="text-[10px] text-slate-400">
-                Planilha CSV completa
-              </p>
-            </div>
-          </button>
-
-          <button
-            onClick={handleExportJSON}
-            className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 bg-slate-50/50 dark:bg-slate-800/40 text-left flex items-center gap-3 transition-colors cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center shrink-0">
-              <Download size={20} />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                Backup (JSON)
-              </h4>
-              <p className="text-[10px] text-slate-400">
-                Cópia de segurança
-              </p>
-            </div>
+            <span>{isGeneratingPDF ? 'Gerando PDF...' : 'Baixar PDF'}</span>
           </button>
         </div>
 
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+        <div className="pt-3 border-t border-[#2A4435] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
           <button
+            type="button"
             onClick={handleLoadDemo}
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#00E676] hover:bg-[#0B1F17] transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <Sparkles size={14} className="text-emerald-600" />
+            <Sparkles size={14} className="text-[#00E676]" />
             <span>Carregar Dados Demonstrativos</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setShowResetModal(true)}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-950/40 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Trash2 size={14} />
             <span>Zerar Todos os Lançamentos</span>
