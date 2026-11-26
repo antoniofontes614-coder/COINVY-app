@@ -70,9 +70,9 @@ export const TransactionModal: React.FC = () => {
         setNotes(editingTransaction.notes || '');
       } else {
         // Create new
-        setType(txModalInitialType || 'expense');
+        setType(editingTransaction?.type || txModalInitialType || 'expense');
         setAmountStr('0');
-        setDescription('');
+        setDescription(editingTransaction?.description || '');
         setDate(new Date().toISOString().split('T')[0]);
         setNotes('');
 

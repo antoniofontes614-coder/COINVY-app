@@ -11,7 +11,13 @@ import {
   Zap,
   CheckCircle2,
   X,
-  Plus
+  Plus,
+  SlidersHorizontal,
+  Check,
+  RotateCcw,
+  Wifi,
+  Droplets,
+  Gamepad2
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useFinance } from '../context/FinanceContext';
@@ -19,6 +25,27 @@ import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import { DynamicIcon } from '../components/DynamicIcon';
 import { Transaction } from '../types';
+
+export interface QuickShortcut {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+const DEFAULT_SHORTCUTS: QuickShortcut[] = [
+  { id: '1', label: 'Internet', icon: 'Wifi' },
+  { id: '2', label: 'Luz', icon: 'Zap' },
+  { id: '3', label: 'Água', icon: 'Droplets' },
+  { id: '4', label: 'Lazer', icon: 'Gamepad2' },
+];
+
+const AVAILABLE_SHORTCUT_ICONS = [
+  'Wifi', 'Zap', 'Droplets', 'Gamepad2',
+  'ShoppingCart', 'Car', 'Home', 'Smartphone',
+  'Utensils', 'CreditCard', 'Receipt', 'TrendingUp',
+  'HeartPulse', 'Coffee', 'Tv', 'Dumbbell',
+  'Sparkles', 'Send', 'Briefcase', 'GraduationCap'
+];
 
 interface DashboardPageProps {
   onNavigateTab: (tab: string) => void;
@@ -36,29 +63,53 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
   const recentTransactions = summary?.recentTransactions ?? [];
   const categoryExpenses = summary?.categoryExpenses ?? [];
 
+  // 4 Atalhos Rápidos Editáveis (Padrão: Internet, Luz, Água, Lazer)
+  const storageKey = `dim_shortcuts_${user?.id || 'default'}`;
+  const [shortcuts, setShortcuts] = useState<QuickShortcut[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 4) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_SHORTCUTS;
+  });
+
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+  const [tempShortcuts, setTempShortcuts] = useState<QuickShortcut[]>(shortcuts);
+
+  const handleOpenCustomize = () => {
+    setTempShortcuts(shortcuts.map(s => ({ ...s })));
+    setShowCustomizeModal(true);
+  };
+
+  const handleSaveShortcuts = () => {
+    setShortcuts(tempShortcuts);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(tempShortcuts));
+    } catch (err) {
+      console.error('Erro ao salvar atalhos:', err);
+    }
+    setShowCustomizeModal(false);
+  };
+
+  const handleResetDefaultShortcuts = () => {
+    setTempShortcuts(DEFAULT_SHORTCUTS.map(s => ({ ...s })));
+  };
+
+  const handleShortcutClick = (shortcut: QuickShortcut) => {
+    openTxModal('create', { description: shortcut.label, type: 'expense' } as any, 'expense');
+  };
+
   const chartData = categoryExpenses.map((c) => ({
     name: c.name,
     value: c.amount,
     color: c.color || '#00E676',
     percentage: c.percentage,
   }));
-
-  const handleQuickAction = (action: 'pix' | 'bill' | 'transfer' | 'recharge') => {
-    switch (action) {
-      case 'pix':
-        openTxModal('create', null, 'transfer');
-        break;
-      case 'bill':
-        openTxModal('create', null, 'expense');
-        break;
-      case 'transfer':
-        openTxModal('create', null, 'transfer');
-        break;
-      case 'recharge':
-        openTxModal('create', null, 'expense');
-        break;
-    }
-  };
 
   // Helper to format date and time for transaction items
   const formatTxTime = (t: Transaction) => {
@@ -178,58 +229,39 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
           </div>
         </div>
 
-        {/* 3. Quick Action Buttons: Pix, Pagar conta, Transferir, Recarga */}
-        <div className="grid grid-cols-4 gap-2.5 pt-1">
-          {/* Pix */}
-          <button
-            type="button"
-            onClick={() => handleQuickAction('pix')}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#1A2E24] hover:bg-[#223D30] border border-[#2A4435] text-white transition-all active:scale-95 group shadow-sm cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] flex items-center justify-center text-[#00E676] group-hover:scale-110 transition-transform">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="8" height="8" rx="1.5" transform="rotate(45 7 7)" />
-                <rect x="13" y="13" width="8" height="8" rx="1.5" transform="rotate(45 17 17)" />
-              </svg>
-            </div>
-            <span className="text-[11px] font-semibold mt-2 text-slate-200">Pix</span>
-          </button>
+        {/* 3. Atalhos Rápidos Customizáveis (Padrão: Internet, Luz, Água, Lazer) */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-semibold text-slate-400">Atalhos rápidos</span>
+            <button
+              type="button"
+              onClick={handleOpenCustomize}
+              className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-[#00E676] transition-colors cursor-pointer"
+              title="Personalizar ou substituir atalhos"
+            >
+              <SlidersHorizontal size={12} />
+              <span>Personalizar</span>
+            </button>
+          </div>
 
-          {/* Pagar conta */}
-          <button
-            type="button"
-            onClick={() => handleQuickAction('bill')}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#1A2E24] hover:bg-[#223D30] border border-[#2A4435] text-white transition-all active:scale-95 group shadow-sm cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] flex items-center justify-center text-[#00E676] group-hover:scale-110 transition-transform">
-              <Barcode size={20} />
-            </div>
-            <span className="text-[11px] font-semibold mt-2 text-slate-200 text-center leading-tight">Pagar conta</span>
-          </button>
-
-          {/* Transferir */}
-          <button
-            type="button"
-            onClick={() => handleQuickAction('transfer')}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#1A2E24] hover:bg-[#223D30] border border-[#2A4435] text-white transition-all active:scale-95 group shadow-sm cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] flex items-center justify-center text-[#00E676] group-hover:scale-110 transition-transform">
-              <Send size={18} className="rotate-[-20deg]" />
-            </div>
-            <span className="text-[11px] font-semibold mt-2 text-slate-200">Transferir</span>
-          </button>
-
-          {/* Recarga */}
-          <button
-            type="button"
-            onClick={() => handleQuickAction('recharge')}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#1A2E24] hover:bg-[#223D30] border border-[#2A4435] text-white transition-all active:scale-95 group shadow-sm cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] flex items-center justify-center text-[#00E676] group-hover:scale-110 transition-transform">
-              <Smartphone size={20} />
-            </div>
-            <span className="text-[11px] font-semibold mt-2 text-slate-200">Recarga</span>
-          </button>
+          <div className="grid grid-cols-4 gap-2.5">
+            {shortcuts.map((shortcut) => (
+              <button
+                key={shortcut.id}
+                type="button"
+                onClick={() => handleShortcutClick(shortcut)}
+                className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#1A2E24] hover:bg-[#223D30] border border-[#2A4435] text-white transition-all active:scale-95 group shadow-sm cursor-pointer"
+                title={`Registrar despesa com ${shortcut.label}`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#0B1F17] flex items-center justify-center text-[#00E676] group-hover:scale-110 transition-transform">
+                  <DynamicIcon name={shortcut.icon} size={20} />
+                </div>
+                <span className="text-[11px] font-semibold mt-2 text-slate-200 text-center leading-tight truncate w-full px-0.5">
+                  {shortcut.label}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 4. Card: Seus gastos deste mês (Gráfico Donut e Detalhamento Real) */}
@@ -449,6 +481,102 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
             >
               Fechar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Personalizar Atalhos Rápidos */}
+      {showCustomizeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-[#1A2E24] border border-[#2A4435] rounded-3xl p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#2A4435]">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal size={18} className="text-[#00E676]" />
+                <h3 className="text-sm font-bold text-white">Personalizar Atalhos</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCustomizeModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              Personalize o nome e o ícone de cada um dos 4 atalhos da sua tela inicial:
+            </p>
+
+            <div className="space-y-3">
+              {tempShortcuts.map((item, idx) => (
+                <div key={item.id} className="p-3 rounded-2xl bg-[#0B1F17] border border-[#2A4435] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-400">Atalho {idx + 1}</span>
+                    <div className="w-7 h-7 rounded-lg bg-[#1A2E24] border border-[#2A4435] flex items-center justify-center text-[#00E676]">
+                      <DynamicIcon name={item.icon} size={15} />
+                    </div>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={item.label}
+                    maxLength={14}
+                    onChange={(e) => {
+                      const updated = [...tempShortcuts];
+                      updated[idx].label = e.target.value;
+                      setTempShortcuts(updated);
+                    }}
+                    placeholder="Nome do atalho"
+                    className="w-full px-3 py-1.5 rounded-xl bg-[#1A2E24] border border-[#2A4435] text-white text-xs focus:border-[#00E676] outline-none"
+                  />
+
+                  {/* Icon Selection Row */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5">
+                    {AVAILABLE_SHORTCUT_ICONS.map((iconName) => {
+                      const isSelected = item.icon === iconName;
+                      return (
+                        <button
+                          key={iconName}
+                          type="button"
+                          onClick={() => {
+                            const updated = [...tempShortcuts];
+                            updated[idx].icon = iconName;
+                            setTempShortcuts(updated);
+                          }}
+                          className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#00E676] text-black ring-1 ring-[#00E676]'
+                              : 'bg-[#1A2E24] text-slate-300 hover:text-white border border-[#2A4435]'
+                          }`}
+                          title={iconName}
+                        >
+                          <DynamicIcon name={iconName} size={14} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 space-y-2">
+              <button
+                type="button"
+                onClick={handleSaveShortcuts}
+                className="w-full py-2.5 rounded-xl bg-[#00E676] hover:bg-[#00c853] text-black font-bold text-xs transition-colors cursor-pointer"
+              >
+                Salvar Atalhos
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetDefaultShortcuts}
+                className="w-full py-2 rounded-xl bg-[#0B1F17] hover:bg-[#254234] border border-[#2A4435] text-slate-300 font-medium text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw size={13} />
+                <span>Restaurar Padrão (Internet, Luz, Água, Lazer)</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
