@@ -24,8 +24,6 @@ import { useFinance } from '../../context/FinanceContext';
 import { api } from '../../services/api';
 import { localDb } from '../../services/storage';
 import { exportTransactionsCSV, downloadFile } from '../../utils/export';
-import { SupabaseModal } from '../SupabaseModal';
-import { isSupabaseConfigured } from '../../services/supabase';
 
 export const SettingsSection: React.FC = () => {
   const { user, updateUser, updateAvatar, theme, toggleTheme, setThemeMode, hideBalances, toggleHideBalances, logout } = useAuth();
@@ -37,11 +35,9 @@ export const SettingsSection: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [dataMessage, setDataMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const isSupabaseActive = isSupabaseConfigured();
 
   // Keep local fields in sync when user updates
   useEffect(() => {
@@ -471,38 +467,6 @@ export const SettingsSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Supabase Cloud Database Integration */}
-      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
-              <Database size={18} />
-            </div>
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                Sincronização em Nuvem (Supabase)
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                {isSupabaseActive
-                  ? 'Conectado: Seus dados estão sincronizados na nuvem em tempo real.'
-                  : 'Desconectado: Seus dados estão salvos apenas neste navegador.'}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsSupabaseModalOpen(true)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              isSupabaseActive
-                ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-            }`}
-          >
-            {isSupabaseActive ? 'Configurado' : 'Conectar Nuvem'}
-          </button>
-        </div>
-      </div>
-
       {/* Data Management & Export Card */}
       <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -736,12 +700,6 @@ export const SettingsSection: React.FC = () => {
           </div>
         </div>
       )}
-
-      <SupabaseModal
-        isOpen={isSupabaseModalOpen}
-        onClose={() => setIsSupabaseModalOpen(false)}
-        onConfigSaved={refreshData}
-      />
 
     </div>
   );
