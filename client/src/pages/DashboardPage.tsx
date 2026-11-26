@@ -16,9 +16,11 @@ import {
   CreditCard,
   Plus
 } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
+import { DynamicIcon } from '../components/DynamicIcon';
 import { Transaction } from '../types';
 
 interface DashboardPageProps {
@@ -35,6 +37,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
   const totalExpense = summary?.totalExpense ?? 2450.00;
   const totalIncome = summary?.totalIncome ?? 5280.00;
   const recentTransactions = summary?.recentTransactions ?? [];
+  const categoryExpenses = summary?.categoryExpenses ?? [];
+
+  // Default detailed categories when user hasn't added custom ones yet
+  const defaultCategoryExpenses = [
+    { id: 'cat_moradia', name: 'Moradia', amount: 784.00, percentage: 32, color: '#f97316', icon: 'Home' },
+    { id: 'cat_alimentacao', name: 'Alimentação', amount: 686.00, percentage: 28, color: '#3b82f6', icon: 'Utensils' },
+    { id: 'cat_transporte', name: 'Transporte', amount: 441.00, percentage: 18, color: '#8b5cf6', icon: 'Car' },
+    { id: 'cat_lazer', name: 'Lazer', amount: 294.00, percentage: 12, color: '#10b981', icon: 'Gamepad2' },
+    { id: 'cat_outros', name: 'Outros', amount: 245.00, percentage: 10, color: '#64748b', icon: 'MoreHorizontal' },
+  ];
+
+  const displayCategories = categoryExpenses.length > 0 ? categoryExpenses : defaultCategoryExpenses;
+
+  const chartData = displayCategories.map((c) => ({
+    name: c.name,
+    value: c.amount,
+    color: c.color || '#00E676',
+    percentage: c.percentage,
+  }));
 
   // Default demonstration transactions to mirror approved reference screen when empty
   const defaultDemoTransactions = [
@@ -257,55 +278,100 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
           </button>
         </div>
 
-        {/* 4. Card: Seus gastos deste mês (with Donut chart on right) */}
-        <div
-          onClick={() => onNavigateTab('relatorios')}
-          className="p-5 rounded-3xl bg-[#1A2E24] border border-[#2A4435] flex items-center justify-between cursor-pointer hover:border-[#00E676]/50 transition-all shadow-md group"
-        >
-          <div className="space-y-1">
-            <span className="text-xs font-medium text-slate-400">
-              Seus gastos deste mês
-            </span>
-            <div className="text-2xl font-black text-white tracking-tight">
-              {formatCurrency(totalExpense, hideBalances)}
+        {/* 4. Card: Seus gastos deste mês (Gráfico Donut Detalhado por Categorias) */}
+        <div className="p-5 rounded-3xl bg-[#1A2E24] border border-[#2A4435] space-y-4 shadow-md">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <span className="text-xs font-medium text-slate-400">
+                Seus gastos deste mês
+              </span>
+              <div className="text-2xl font-black text-white tracking-tight">
+                {formatCurrency(totalExpense, hideBalances)}
+              </div>
+              <div
+                onClick={() => onNavigateTab('relatorios')}
+                className="flex items-center gap-1 text-[11px] font-bold text-[#00E676] pt-0.5 cursor-pointer hover:underline"
+              >
+                <TrendingDown size={14} className="text-[#00E676]" />
+                <span>↓ 8% vs mês anterior</span>
+                <ChevronRight size={14} />
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-bold text-[#00E676] pt-0.5">
-              <TrendingDown size={14} className="text-[#00E676]" />
-              <span>↓ 8% vs mês anterior</span>
-              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-            </div>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('relatorios')}
+              className="text-xs font-semibold text-slate-400 hover:text-[#00E676] flex items-center gap-0.5 transition-colors"
+            >
+              <span>Ver detalhes</span>
+              <ChevronRight size={14} />
+            </button>
           </div>
 
-          {/* Glowing Green Donut Chart */}
-          <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-              {/* Background ring */}
-              <circle
-                cx="18"
-                cy="18"
-                r="15"
-                fill="none"
-                stroke="#0B1F17"
-                strokeWidth="4"
-              />
-              {/* Active stroke ring */}
-              <circle
-                cx="18"
-                cy="18"
-                r="15"
-                fill="none"
-                stroke="#00E676"
-                strokeWidth="4"
-                strokeDasharray="94.2"
-                strokeDashoffset="28"
-                strokeLinecap="round"
-                className="drop-shadow-[0_0_6px_rgba(0,230,118,0.8)]"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-10 h-10 rounded-full bg-[#0B1F17] flex items-center justify-center">
-                <span className="text-[10px] font-extrabold text-[#00E676]">70%</span>
+          {/* Gráfico Donut com Segmentos Coloridos por Categoria */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 pt-1">
+            <div className="relative w-36 h-36 shrink-0 flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={42}
+                    outerRadius={64}
+                    paddingAngle={3}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(val: any) => [formatCurrency(Number(val), hideBalances), 'Total']}
+                    contentStyle={{
+                      backgroundColor: '#0B1F17',
+                      borderRadius: '12px',
+                      border: '1px solid #2A4435',
+                      color: '#fff',
+                      fontSize: '11px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Total</span>
+                <span className="text-xs font-extrabold text-white">
+                  {formatCurrency(totalExpense, hideBalances)}
+                </span>
               </div>
+            </div>
+
+            {/* Lista Detalhada de Categorias com cores e percentuais */}
+            <div className="flex-1 w-full space-y-2">
+              {displayCategories.slice(0, 4).map((cat) => (
+                <div key={cat.id} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 truncate pr-2">
+                    <div
+                      className="w-5 h-5 rounded-md flex items-center justify-center text-white shrink-0"
+                      style={{ backgroundColor: cat.color }}
+                    >
+                      <DynamicIcon name={cat.icon} size={11} />
+                    </div>
+                    <span className="font-semibold text-slate-200 truncate text-[11px]">
+                      {cat.name}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0 flex items-center gap-1.5">
+                    <span className="font-bold text-white text-[11px]">
+                      {formatCurrency(cat.amount, hideBalances)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 bg-[#0B1F17] px-1.5 py-0.5 rounded-full border border-[#2A4435]">
+                      {cat.percentage}%
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
