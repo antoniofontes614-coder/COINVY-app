@@ -25,6 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import { DynamicIcon } from '../components/DynamicIcon';
 import { Transaction } from '../types';
+import { api } from '../services/api';
 
 export interface QuickShortcut {
   id: string;
@@ -53,7 +54,7 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) => {
-  const { summary, openTxModal, categories } = useFinance();
+  const { summary, openTxModal, categories, refreshData } = useFinance();
   const { user, hideBalances, toggleHideBalances } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -101,19 +102,39 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     setTempShortcuts(DEFAULT_SHORTCUTS.map(s => ({ ...s })));
   };
 
-  const handleShortcutClick = (shortcut: QuickShortcut) => {
-    const matchedCategory = categories.find(
-      (c) => (shortcut.categoryId && c.id === shortcut.categoryId) || c.name.toLowerCase() === shortcut.label.toLowerCase()
+  const handleShortcutClick = async (shortcut: QuickShortcut) => {
+    // 1. Procura se já existe categoria com este nome ou id
+    let matchedCategory = categories.find(
+      (c) =>
+        (shortcut.categoryId && c.id === shortcut.categoryId) ||
+        c.name.trim().toLowerCase() === shortcut.label.trim().toLowerCase()
     );
 
+    // 2. Se a categoria ainda não existe com o nome do atalho, cria automaticamente agora!
+    if (!matchedCategory && shortcut.label.trim()) {
+      try {
+        const res = await api.categories.create({
+          name: shortcut.label.trim(),
+          type: 'expense',
+          icon: shortcut.icon || 'Tag',
+          color: '#00E676',
+        });
+        matchedCategory = res.category;
+        await refreshData();
+      } catch (e) {
+        console.warn('Auto-criação de categoria:', e);
+      }
+    }
+
+    // 3. Abre o modal com a descrição E a categoria correspondente EXATAMENTE selecionadas!
     openTxModal(
       'create',
       {
         description: shortcut.label,
         category_id: matchedCategory ? matchedCategory.id : undefined,
-        type: matchedCategory ? matchedCategory.type : 'expense',
+        type: 'expense',
       } as any,
-      matchedCategory ? matchedCategory.type : 'expense'
+      'expense'
     );
   };
 
@@ -427,14 +448,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
                           ? 'bg-emerald-500/20 text-[#00E676] border border-emerald-500/30'
                           : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                       }`}>
-                        {isIncome ? <TrendingUp size={18} /> : <ShoppingCart size={18} />}
+                        {isIncome ? (
+                          <TrendingUp size={18} />
+                        ) : tx.category_icon ? (
+                          <DynamicIcon name={tx.category_icon} size={18} />
+                        ) : (
+                          <ShoppingCart size={18} />
+                        )}
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-white">
                           {tx.description || tx.category_name || 'Movimentação'}
                         </h4>
                         <p className="text-[10px] text-slate-400">
-                          {formatTxTime(tx)}
+                          {formatTxTime(tx)} {tx.category_name && tx.category_name !== tx.description ? `• ${tx.category_name}` : ''}
                         </p>
                       </div>
                     </div>

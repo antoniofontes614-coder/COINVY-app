@@ -11,13 +11,16 @@ import {
 
 // Default categories
 export const DEFAULT_EXPENSE_CATEGORIES = [
+  { name: 'Internet', icon: 'Wifi', color: '#06b6d4' },
+  { name: 'Luz', icon: 'Zap', color: '#eab308' },
+  { name: 'Água', icon: 'Droplets', color: '#3b82f6' },
+  { name: 'Lazer', icon: 'Gamepad2', color: '#10b981' },
   { name: 'Alimentação', icon: 'Utensils', color: '#f97316' },
   { name: 'Mercado', icon: 'ShoppingCart', color: '#06b6d4' },
   { name: 'Moradia', icon: 'Home', color: '#8b5cf6' },
   { name: 'Transporte', icon: 'Car', color: '#3b82f6' },
   { name: 'Saúde', icon: 'HeartPulse', color: '#ec4899' },
   { name: 'Educação', icon: 'GraduationCap', color: '#14b8a6' },
-  { name: 'Lazer', icon: 'Gamepad2', color: '#eab308' },
   { name: 'Compras', icon: 'ShoppingBag', color: '#f43f5e' },
   { name: 'Assinaturas', icon: 'Repeat', color: '#6366f1' },
   { name: 'Contas domésticas', icon: 'Receipt', color: '#64748b' },
@@ -119,6 +122,27 @@ export const localDb = {
         });
       }
       setStored('coinvy_db_categories', categories);
+    } else {
+      // Ensure default shortcut categories exist
+      let added = false;
+      for (const cat of DEFAULT_EXPENSE_CATEGORIES.slice(0, 4)) {
+        if (!categories.some(c => c.user_id === userId && c.name.toLowerCase() === cat.name.toLowerCase())) {
+          categories.push({
+            id: generateId(),
+            user_id: userId,
+            name: cat.name,
+            type: 'expense',
+            icon: cat.icon,
+            color: cat.color,
+            is_default: 1,
+            created_at: now,
+          });
+          added = true;
+        }
+      }
+      if (added) {
+        setStored('coinvy_db_categories', categories);
+      }
     }
 
     // Check if user already has accounts
