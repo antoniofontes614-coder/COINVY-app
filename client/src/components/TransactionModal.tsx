@@ -50,6 +50,7 @@ export const TransactionModal: React.FC = () => {
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('Tag');
   const [newCatColor, setNewCatColor] = useState('#059669');
+  const [showDetails, setShowDetails] = useState(false);
 
   // Synchronize state when modal opens
   useEffect(() => {
@@ -68,13 +69,16 @@ export const TransactionModal: React.FC = () => {
         setDestinationAccountId(editingTransaction.destination_account_id || '');
         setDate(txModalMode === 'duplicate' ? new Date().toISOString().split('T')[0] : editingTransaction.date);
         setNotes(editingTransaction.notes || '');
+        setShowDetails(true);
       } else {
         // Create new
-        setType(editingTransaction?.type || txModalInitialType || 'expense');
+        const initialType = editingTransaction?.type || txModalInitialType || 'expense';
+        setType(initialType);
         setAmountStr('0');
         setDescription(editingTransaction?.description || '');
         setDate(new Date().toISOString().split('T')[0]);
         setNotes('');
+        setShowDetails(initialType === 'transfer');
 
         // Preselect default account
         if (accounts.length > 0) {
@@ -94,11 +98,11 @@ export const TransactionModal: React.FC = () => {
           if (matchByName) {
             setCategoryId(matchByName.id);
           } else {
-            const initialCats = categories.filter(c => c.type === (editingTransaction?.type || txModalInitialType || 'expense'));
+            const initialCats = categories.filter(c => c.type === initialType);
             setCategoryId(initialCats[0]?.id || '');
           }
         } else {
-          const initialCats = categories.filter(c => c.type === (editingTransaction?.type || txModalInitialType || 'expense'));
+          const initialCats = categories.filter(c => c.type === initialType);
           if (initialCats.length > 0) {
             setCategoryId(initialCats[0].id);
           } else {
@@ -290,12 +294,12 @@ export const TransactionModal: React.FC = () => {
     : ['Salário', 'Freelance', 'PIX Recebido', 'Rendimento', 'Venda', 'Bônus'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col my-auto max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-[#121B2B] border border-[#1e2c42] rounded-3xl shadow-2xl w-full max-w-[430px] overflow-hidden flex flex-col my-auto max-h-[96dvh] sm:max-h-[92vh]">
         
         {/* Header Tabs */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl w-full max-w-xs">
+        <div className="px-3 py-2.5 sm:px-4 sm:py-3 border-b border-[#1e2c42] flex items-center justify-between gap-2 shrink-0">
+          <div className="flex bg-[#162132] p-1 rounded-2xl flex-1 min-w-0">
             <button
               type="button"
               onClick={() => {
@@ -303,14 +307,14 @@ export const TransactionModal: React.FC = () => {
                 const first = categories.find(c => c.type === 'expense');
                 if (first) setCategoryId(first.id);
               }}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-1.5 px-2 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 transition-all truncate ${
                 type === 'expense'
-                  ? 'bg-rose-500 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#FF0044] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ArrowDownCircle size={14} />
-              Despesa
+              <ArrowDownCircle size={13} className="shrink-0" />
+              <span className="truncate">Despesa</span>
             </button>
             <button
               type="button"
@@ -319,61 +323,66 @@ export const TransactionModal: React.FC = () => {
                 const first = categories.find(c => c.type === 'income');
                 if (first) setCategoryId(first.id);
               }}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-1.5 px-2 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 transition-all truncate ${
                 type === 'income'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#00C853] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ArrowUpCircle size={14} />
-              Receita
+              <ArrowUpCircle size={13} className="shrink-0" />
+              <span className="truncate">Receita</span>
             </button>
             <button
               type="button"
-              onClick={() => setType('transfer')}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              onClick={() => {
+                setType('transfer');
+                setShowDetails(true);
+              }}
+              className={`flex-1 py-1.5 px-2 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 transition-all truncate ${
                 type === 'transfer'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#4F46E5] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ArrowRightLeft size={14} />
-              Transferir
+              <ArrowRightLeft size={13} className="shrink-0" />
+              <span className="truncate">Transferir</span>
             </button>
           </div>
 
           <button
+            type="button"
             onClick={closeTxModal}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ml-2"
+            className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors shrink-0"
+            title="Fechar"
           >
-            <X size={20} />
+            <X size={19} />
           </button>
         </div>
 
         {/* Scrollable Body */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+        <div className="p-3 sm:p-4 overflow-y-auto space-y-2.5 sm:space-y-3.5 flex-1 scrollbar-thin scrollbar-thumb-slate-700">
           {errorMsg && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-medium">
+            <div className="p-2.5 bg-rose-950/60 border border-rose-800/80 rounded-xl text-rose-300 text-xs font-medium">
               {errorMsg}
             </div>
           )}
 
           {/* Amount Display */}
-          <div className="text-center py-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/80">
-            <span className="text-xs uppercase tracking-wider font-semibold text-slate-400">
-              {type === 'expense' ? 'Valor a Gastar' : type === 'income' ? 'Valor a Receber' : 'Valor a Transferir'}
+          <div className="text-center py-2 px-3 bg-[#162132] rounded-2xl border border-[#1e2c42]">
+            <span className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-slate-400">
+              {type === 'expense' ? 'VALOR A GASTAR' : type === 'income' ? 'VALOR A RECEBER' : 'VALOR A TRANSFERIR'}
             </span>
-            <div className="flex items-center justify-center mt-1">
-              <span className={`text-2xl font-bold mr-1 ${
-                type === 'expense' ? 'text-rose-500' : type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
+            <div className="flex items-center justify-center mt-0.5">
+              <span className={`text-xl sm:text-2xl font-bold mr-1 ${
+                type === 'expense' ? 'text-[#FF0044]' : type === 'income' ? 'text-[#00E676]' : 'text-indigo-400'
               }`}>
                 R$
               </span>
-              <span className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
                 {amountStr}
               </span>
               {mathOp && (
-                <span className="ml-2 text-sm px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 rounded-full font-bold">
+                <span className="ml-2 text-xs px-2 py-0.5 bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 rounded-full font-bold">
                   {prevVal} {mathOp}
                 </span>
               )}
@@ -381,13 +390,13 @@ export const TransactionModal: React.FC = () => {
           </div>
 
           {/* Monefy-style Numeric Pad */}
-          <div className="grid grid-cols-4 gap-1.5 p-2 bg-slate-100/70 dark:bg-slate-800/70 rounded-2xl">
+          <div className="grid grid-cols-4 gap-1 sm:gap-1.5 p-1.5 sm:p-2 bg-[#162132] rounded-2xl border border-[#1e2c42]">
             {['1', '2', '3'].map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => handleDigit(d)}
-                className="h-11 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
+                className="h-9 sm:h-11 rounded-xl bg-[#1B283D] hover:bg-[#243550] text-white font-bold text-base sm:text-lg flex items-center justify-center active:scale-95 transition-all shadow-xs"
               >
                 {d}
               </button>
@@ -395,9 +404,10 @@ export const TransactionModal: React.FC = () => {
             <button
               type="button"
               onClick={handleBackspace}
-              className="h-11 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold flex items-center justify-center hover:bg-slate-300 active:scale-95 transition-all"
+              className="h-9 sm:h-11 rounded-xl bg-[#24334B] hover:bg-[#2c3e5c] text-slate-300 hover:text-white font-semibold flex items-center justify-center active:scale-95 transition-all"
+              title="Apagar"
             >
-              <Delete size={18} />
+              <Delete size={17} className="sm:w-5 sm:h-5" />
             </button>
 
             {['4', '5', '6'].map((d) => (
@@ -405,7 +415,7 @@ export const TransactionModal: React.FC = () => {
                 key={d}
                 type="button"
                 onClick={() => handleDigit(d)}
-                className="h-11 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
+                className="h-9 sm:h-11 rounded-xl bg-[#1B283D] hover:bg-[#243550] text-white font-bold text-base sm:text-lg flex items-center justify-center active:scale-95 transition-all shadow-xs"
               >
                 {d}
               </button>
@@ -413,7 +423,8 @@ export const TransactionModal: React.FC = () => {
             <button
               type="button"
               onClick={() => handleMath('+')}
-              className="h-11 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-lg hover:bg-emerald-200 active:scale-95 transition-all"
+              className="h-9 sm:h-11 rounded-xl bg-[#0D3829] hover:bg-[#124d38] text-[#00E676] font-bold text-base sm:text-lg flex items-center justify-center active:scale-95 transition-all"
+              title="Somar"
             >
               +
             </button>
@@ -423,7 +434,7 @@ export const TransactionModal: React.FC = () => {
                 key={d}
                 type="button"
                 onClick={() => handleDigit(d)}
-                className="h-11 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
+                className="h-9 sm:h-11 rounded-xl bg-[#1B283D] hover:bg-[#243550] text-white font-bold text-base sm:text-lg flex items-center justify-center active:scale-95 transition-all shadow-xs"
               >
                 {d}
               </button>
@@ -431,7 +442,8 @@ export const TransactionModal: React.FC = () => {
             <button
               type="button"
               onClick={() => handleMath('-')}
-              className="h-11 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold text-lg hover:bg-rose-200 active:scale-95 transition-all"
+              className="h-9 sm:h-11 rounded-xl bg-[#3D1421] hover:bg-[#521b2c] text-[#FF2E56] font-bold text-base sm:text-lg flex items-center justify-center active:scale-95 transition-all"
+              title="Subtrair"
             >
               -
             </button>
@@ -439,37 +451,39 @@ export const TransactionModal: React.FC = () => {
             <button
               type="button"
               onClick={handleClear}
-              className="h-11 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase hover:bg-slate-300 active:scale-95 transition-all"
+              className="h-9 sm:h-11 rounded-xl bg-[#24334B] hover:bg-[#2c3e5c] text-slate-300 hover:text-white font-bold text-xs uppercase flex items-center justify-center active:scale-95 transition-all"
+              title="Limpar"
             >
               C
             </button>
             <button
               type="button"
               onClick={() => handleDigit('0')}
-              className="h-11 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
+              className="h-9 sm:h-11 rounded-xl bg-[#1B283D] hover:bg-[#243550] text-white font-bold text-base sm:text-lg flex items-center justify-center active:scale-95 transition-all shadow-xs"
             >
               0
             </button>
             <button
               type="button"
               onClick={() => handleDigit(',')}
-              className="h-11 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
+              className="h-9 sm:h-11 rounded-xl bg-[#1B283D] hover:bg-[#243550] text-white font-bold text-base sm:text-lg flex items-center justify-center active:scale-95 transition-all shadow-xs"
             >
               ,
             </button>
             <button
               type="button"
               onClick={handleEquals}
-              className="h-11 rounded-xl bg-emerald-600 text-white font-bold text-lg hover:bg-emerald-700 active:scale-95 transition-all shadow-xs"
+              className="h-9 sm:h-11 rounded-xl bg-[#00C853] hover:bg-[#00E676] text-white font-bold text-base sm:text-lg flex items-center justify-center active:scale-95 transition-all shadow-md"
+              title="Calcular"
             >
               =
             </button>
           </div>
 
           {/* Description & Quick Suggestions */}
-          <div className="space-y-1.5">
+          <div className="space-y-1 sm:space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              <label className="text-xs font-semibold text-slate-300">
                 Descrição
               </label>
             </div>
@@ -478,16 +492,16 @@ export const TransactionModal: React.FC = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={type === 'transfer' ? 'Ex: Transferência de saldo' : 'Ex: Almoço no restaurante'}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 rounded-xl border border-[#1e2c42] bg-[#162132] text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-[#00E676]"
             />
             {type !== 'transfer' && (
-              <div className="flex gap-1.5 overflow-x-auto py-1 scrollbar-none">
+              <div className="flex gap-1.5 overflow-x-auto py-0.5 scrollbar-none">
                 {quickSuggestions.map((sug) => (
                   <button
                     key={sug}
                     type="button"
                     onClick={() => setDescription(sug)}
-                    className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950 dark:hover:text-emerald-300 transition-colors whitespace-nowrap"
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-[#1B283D] text-slate-300 hover:text-white hover:bg-[#243550] transition-colors whitespace-nowrap"
                   >
                     {sug}
                   </button>
@@ -498,15 +512,15 @@ export const TransactionModal: React.FC = () => {
 
           {/* Category Selector (if not transfer) */}
           {type !== 'transfer' && (
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <label className="text-xs font-semibold text-slate-300">
                   Categoria
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowNewCategory(!showNewCategory)}
-                  className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                  className="text-xs font-semibold text-[#00E676] hover:underline flex items-center gap-1"
                 >
                   <Plus size={13} />
                   Nova Categoria
@@ -515,19 +529,19 @@ export const TransactionModal: React.FC = () => {
 
               {/* Inline Create Category Form */}
               {showNewCategory && (
-                <div className="p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-2.5 animate-in slide-in-from-top-2">
+                <div className="p-2.5 bg-[#162132] border border-[#1e2c42] rounded-2xl space-y-2 animate-in slide-in-from-top-2">
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
                       placeholder="Nome da categoria"
                       value={newCatName}
                       onChange={(e) => setNewCatName(e.target.value)}
-                      className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs"
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-[#1e2c42] bg-[#0f172a] text-white text-xs placeholder-slate-500 focus:outline-none focus:border-[#00E676]"
                     />
                     <button
                       type="button"
                       onClick={handleCreateCategory}
-                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700"
+                      className="px-3 py-1.5 bg-[#00C853] text-white rounded-lg text-xs font-semibold hover:bg-[#00E676]"
                     >
                       Criar
                     </button>
@@ -535,8 +549,8 @@ export const TransactionModal: React.FC = () => {
                 </div>
               )}
 
-              {/* Category Grid */}
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-36 overflow-y-auto p-1">
+              {/* Category Grid: 4 columns, showing 2 rows cleanly (8 items visible) */}
+              <div className="grid grid-cols-4 gap-1.5 sm:gap-2 max-h-[145px] sm:max-h-[160px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-slate-700">
                 {availableCategories.map((cat) => {
                   const isSelected = categoryId === cat.id;
                   return (
@@ -544,19 +558,19 @@ export const TransactionModal: React.FC = () => {
                       key={cat.id}
                       type="button"
                       onClick={() => setCategoryId(cat.id)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all border ${
+                      className={`flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-2xl transition-all border ${
                         isSelected
-                          ? 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 font-bold scale-[1.03] shadow-xs'
-                          : 'border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          ? 'border-2 border-[#00E676] bg-[#0c2419] text-[#00E676] font-bold scale-[1.02] shadow-xs'
+                          : 'border border-[#1e2c42] bg-[#162132] text-slate-300 hover:bg-[#1B283D] hover:border-slate-700'
                       }`}
                     >
                       <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center mb-1 text-white shadow-xs"
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center mb-1 text-white shadow-xs"
                         style={{ backgroundColor: cat.color }}
                       >
-                        <DynamicIcon name={cat.icon} size={18} />
+                        <DynamicIcon name={cat.icon} size={16} />
                       </div>
-                      <span className="text-[10px] leading-tight text-center truncate w-full">
+                      <span className="text-[10px] sm:text-[11px] leading-tight text-center truncate w-full px-0.5 font-medium">
                         {cat.name}
                       </span>
                     </button>
@@ -566,107 +580,157 @@ export const TransactionModal: React.FC = () => {
             </div>
           )}
 
-          {/* Account Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                {type === 'transfer' ? 'Conta de Origem' : 'Conta'}
-              </label>
-              <select
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                {accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.name} ({formatCurrency(acc.current_balance)})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {type === 'transfer' ? (
-              <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                  Conta de Destino
-                </label>
-                <select
-                  value={destinationAccountId}
-                  onChange={(e) => setDestinationAccountId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Selecione a conta...</option>
-                  {accounts
-                    .filter((a) => a.id !== accountId)
-                    .map((acc) => (
+          {/* Opções Adicionais: Data, Conta e Observações */}
+          {type === 'transfer' ? (
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    Conta de Origem
+                  </label>
+                  <select
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#1e2c42] bg-[#162132] text-white text-xs font-medium focus:outline-none focus:border-[#00E676]"
+                  >
+                    {accounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.name} ({formatCurrency(acc.current_balance)})
                       </option>
                     ))}
-                </select>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    Conta de Destino
+                  </label>
+                  <select
+                    value={destinationAccountId}
+                    onChange={(e) => setDestinationAccountId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#1e2c42] bg-[#162132] text-white text-xs font-medium focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">Selecione a conta...</option>
+                    {accounts
+                      .filter((a) => a.id !== accountId)
+                      .map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} ({formatCurrency(acc.current_balance)})
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
-            ) : (
+
               <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                  Data
+                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  Data da Transferência
                 </label>
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl border border-[#1e2c42] bg-[#162132] text-white text-xs font-medium focus:outline-none focus:border-[#00E676]"
                 />
               </div>
-            )}
-          </div>
 
-          {/* Date for Transfer mode */}
-          {type === 'transfer' && (
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                Data da Transferência
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  Observações (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Ex: Transferência entre contas"
+                  className="w-full px-3 py-2 rounded-xl border border-[#1e2c42] bg-[#162132] text-white placeholder-slate-500 text-xs focus:outline-none focus:border-[#00E676]"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="pt-0.5">
+              <button
+                type="button"
+                onClick={() => setShowDetails(!showDetails)}
+                className="w-full py-1.5 px-3 rounded-xl bg-[#162132]/60 hover:bg-[#162132] border border-[#1e2c42] text-slate-400 hover:text-slate-200 text-[11px] font-medium flex items-center justify-between transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Calendar size={13} className="text-[#00E676]" />
+                  <span>Data, Conta e Observações</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-semibold">
+                  {showDetails ? 'Ocultar ▲' : 'Alterar ▼'}
+                </span>
+              </button>
+
+              {showDetails && (
+                <div className="mt-2.5 space-y-2.5 p-3 bg-[#162132]/70 rounded-2xl border border-[#1e2c42] animate-in fade-in slide-in-from-top-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">
+                        Conta
+                      </label>
+                      <select
+                        value={accountId}
+                        onChange={(e) => setAccountId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#1e2c42] bg-[#0f172a] text-white text-xs font-medium focus:outline-none focus:border-[#00E676]"
+                      >
+                        {accounts.map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name} ({formatCurrency(acc.current_balance)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">
+                        Data
+                      </label>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#1e2c42] bg-[#0f172a] text-white text-xs font-medium focus:outline-none focus:border-[#00E676]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">
+                      Observações (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Ex: Comprovante guardado no e-mail"
+                      className="w-full px-3 py-2 rounded-xl border border-[#1e2c42] bg-[#0f172a] text-white placeholder-slate-500 text-xs focus:outline-none focus:border-[#00E676]"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
-          {/* Notes Optional */}
-          <div>
-            <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-              Observações (opcional)
-            </label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex: Comprovante guardado no e-mail"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+        <div className="p-3 sm:p-4 bg-[#121B2B] border-t border-[#1e2c42] flex items-center justify-between gap-3 shrink-0">
           {txModalMode === 'edit' ? (
             <button
               type="button"
               onClick={handleDelete}
               disabled={isSubmitting}
-              className="px-3.5 py-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors flex items-center gap-1.5"
+              className="px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-950/50 rounded-xl transition-colors flex items-center gap-1.5"
             >
-              <Trash2 size={16} />
+              <Trash2 size={15} />
               Excluir
             </button>
           ) : (
             <button
               type="button"
               onClick={closeTxModal}
-              className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-400 hover:text-white rounded-xl hover:bg-slate-800/50 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -676,15 +740,15 @@ export const TransactionModal: React.FC = () => {
             type="button"
             onClick={() => handleSubmit()}
             disabled={isSubmitting}
-            className={`flex-1 py-3 px-5 rounded-2xl text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 ${
+            className={`flex-1 py-2.5 sm:py-3 px-4 sm:px-5 rounded-2xl text-white font-bold text-xs sm:text-sm shadow-lg transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer ${
               type === 'expense'
-                ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20'
+                ? 'bg-[#FF0044] hover:bg-[#E6003D] shadow-rose-900/30'
                 : type === 'income'
-                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
-                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20'
+                ? 'bg-[#00C853] hover:bg-[#00E676] shadow-emerald-900/30'
+                : 'bg-[#4F46E5] hover:bg-[#4338CA] shadow-indigo-900/30'
             }`}
           >
-            <Check size={18} />
+            <Check size={17} />
             {isSubmitting ? 'Salvando...' : txModalMode === 'edit' ? 'Salvar Alterações' : 'Salvar Movimentação'}
           </button>
         </div>
