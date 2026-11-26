@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Bell,
   ChevronRight,
@@ -17,7 +17,9 @@ import {
   RotateCcw,
   Wifi,
   Droplets,
-  Gamepad2
+  Gamepad2,
+  Camera,
+  User
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useFinance } from '../context/FinanceContext';
@@ -55,8 +57,56 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) => {
   const { summary, openTxModal, categories, refreshData } = useFinance();
-  const { user, hideBalances, toggleHideBalances } = useAuth();
+  const { user, hideBalances, toggleHideBalances, updateAvatar } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [avatarToast, setAvatarToast] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (JPG, PNG, WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (readerEvent) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 256;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          updateAvatar(dataUrl);
+          setAvatarToast('Foto atualizada com sucesso!');
+          setTimeout(() => setAvatarToast(null), 3000);
+        }
+      };
+      img.src = readerEvent.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Financial metrics from context (strictly 100% real user data)
   const totalBalance = summary?.totalBalance ?? 0;
@@ -178,15 +228,66 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowNotifications(true)}
-          className="relative p-2 rounded-full bg-[#1A2E24] hover:bg-[#254234] border border-[#2A4435] text-slate-200 transition-all active:scale-95 cursor-pointer shrink-0"
-          title="Notificações"
-        >
-          <Bell size={19} className="text-white" />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Sino de Notificações */}
+          <button
+            type="button"
+            onClick={() => setShowNotifications(true)}
+            className="relative p-2 rounded-full bg-[#1A2E24] hover:bg-[#254234] border border-[#2A4435] text-slate-200 transition-all active:scale-95 cursor-pointer"
+            title="Notificações"
+          >
+            <Bell size={18} className="text-white" />
+          </button>
+
+          {/* Envio e Exibição de Foto do Usuário */}
+          <input
+            type="file"
+            ref={avatarInputRef}
+            accept="image/*"
+            onChange={handleAvatarUpload}
+            className="hidden"
+          />
+
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            className="relative w-9 h-9 rounded-full bg-[#1A2E24] hover:border-[#00E676] border border-[#2A4435] flex items-center justify-center transition-all active:scale-95 cursor-pointer group shadow-sm"
+            title={user?.avatar_url ? "Alterar sua foto de perfil" : "Enviar sua foto de perfil"}
+          >
+            {user?.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.name || 'Perfil'}
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              <User size={18} className="text-slate-300 group-hover:text-[#00E676] transition-colors" />
+            )}
+            
+            {/* Ícone de câmera pequeno no canto */}
+            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#00E676] text-black flex items-center justify-center border border-[#0B1F17] shadow-xs">
+              <Camera size={8} />
+            </span>
+          </button>
+        </div>
       </header>
+
+      {/* Toast Feedback de Foto Atualizada */}
+      {avatarToast && (
+        <div className="mb-2 p-2.5 rounded-2xl bg-[#1A2E24] border border-[#00E676]/60 text-white text-xs font-semibold flex items-center justify-between shadow-lg animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-[#00E676]" />
+            <span>{avatarToast}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAvatarToast(null)}
+            className="text-slate-400 hover:text-white"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <div className="space-y-4 mt-2">
         
