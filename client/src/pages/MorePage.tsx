@@ -14,10 +14,14 @@ import { BudgetsSection } from '../components/more/BudgetsSection';
 import { GoalsSection } from '../components/more/GoalsSection';
 import { RecurringSection } from '../components/more/RecurringSection';
 
-export const MorePage: React.FC = () => {
+interface MorePageProps {
+  initialSubTab?: 'settings' | 'accounts' | 'categories' | 'budgets' | 'goals' | 'recurring';
+}
+
+export const MorePage: React.FC<MorePageProps> = ({ initialSubTab = 'settings' }) => {
   const [activeSubTab, setActiveSubTab] = useState<
     'settings' | 'accounts' | 'categories' | 'budgets' | 'goals' | 'recurring'
-  >('settings');
+  >(initialSubTab);
 
   const navItems = [
     { id: 'settings', label: 'Meu Perfil', icon: User },

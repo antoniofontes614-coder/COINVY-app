@@ -31,14 +31,16 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-emerald-100 selection:text-emerald-900 transition-colors">
-      <Navbar currentTab={currentTab} onNavigateTab={setCurrentTab} />
+    <div className="min-h-screen bg-[#0B1F17] text-white flex flex-col selection:bg-[#00E676] selection:text-black transition-colors">
+      {currentTab !== 'inicio' && <Navbar currentTab={currentTab} onNavigateTab={setCurrentTab} />}
 
-      <main className="flex-1 max-w-5xl w-full mx-auto p-2 sm:p-4 animate-in fade-in duration-150">
+      <main className="flex-1 w-full mx-auto animate-in fade-in duration-150">
         {currentTab === 'inicio' && <DashboardPage onNavigateTab={setCurrentTab} />}
+        {currentTab === 'categorias' && <MorePage initialSubTab="categories" />}
         {currentTab === 'movimentacoes' && <TransactionsPage />}
+        {currentTab === 'metas' && <MorePage initialSubTab="goals" />}
         {currentTab === 'relatorios' && <ReportsPage />}
-        {currentTab === 'perfil' && <MorePage />}
+        {currentTab === 'perfil' && <MorePage initialSubTab="settings" />}
       </main>
 
       <BottomNav currentTab={currentTab} onTabChange={setCurrentTab} />

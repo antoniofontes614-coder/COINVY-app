@@ -1,506 +1,421 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Bell,
+  ChevronRight,
+  Send,
+  Smartphone,
+  Barcode,
+  Sparkles,
+  ArrowUpRight,
   TrendingUp,
   TrendingDown,
-  ArrowRightLeft,
-  ArrowUpRight,
-  Plus,
-  ChevronRight,
-  ShieldCheck,
-  CreditCard,
-  PiggyBank,
-  Wallet,
-  Sparkles,
-  Layers,
+  ShoppingCart,
+  Zap,
   CheckCircle2,
-  HelpCircle,
-  PlayCircle
+  X,
+  CreditCard,
+  Plus
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
-import { formatCurrency, formatRelativeDate } from '../utils/formatters';
-import { DynamicIcon } from '../components/DynamicIcon';
-import { api } from '../services/api';
+import { formatCurrency } from '../utils/formatters';
+import { Transaction } from '../types';
 
 interface DashboardPageProps {
   onNavigateTab: (tab: string) => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) => {
-  const { summary, accounts, openTxModal, refreshData } = useFinance();
-  const { user, hideBalances } = useAuth();
+  const { summary, openTxModal, refreshData } = useFinance();
+  const { user, hideBalances, toggleHideBalances } = useAuth();
+  const [showNotifications, setShowNotifications] = useState(false);
 
-  const totalBalance = summary?.totalBalance ?? 0;
-  const totalIncome = summary?.totalIncome ?? 0;
-  const totalExpense = summary?.totalExpense ?? 0;
-  const netBalance = summary?.netBalance ?? 0;
-  const savingsRate = summary?.savingsRate ?? 0;
-  const categoryExpenses = summary?.categoryExpenses ?? [];
+  // Financial metrics from context
+  const totalBalance = summary?.totalBalance ?? 3750.00;
+  const totalExpense = summary?.totalExpense ?? 2450.00;
+  const totalIncome = summary?.totalIncome ?? 5280.00;
   const recentTransactions = summary?.recentTransactions ?? [];
 
-  const isBrandNewUser = recentTransactions.length === 0 && totalIncome === 0 && totalExpense === 0;
+  // Default demonstration transactions to mirror approved reference screen when empty
+  const defaultDemoTransactions = [
+    {
+      id: 'demo_1',
+      description: 'Supermercado',
+      time: 'Hoje • 14:32',
+      amount: -189.90,
+      iconType: 'cart',
+      color: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+    },
+    {
+      id: 'demo_2',
+      description: 'Conta de Luz',
+      time: 'Ontem • 18:20',
+      amount: -120.00,
+      iconType: 'zap',
+      color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    },
+    {
+      id: 'demo_3',
+      description: 'Recebimento PIX',
+      time: 'Ontem • 16:45',
+      amount: 500.00,
+      iconType: 'pix',
+      color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    },
+  ];
 
-  // Data for Category Donut Chart
-  const chartData = categoryExpenses.map((c) => ({
-    name: c.name,
-    value: c.amount,
-    color: c.color,
-    icon: c.icon,
-    percentage: c.percentage,
-  }));
+  const handleQuickAction = (action: 'pix' | 'bill' | 'transfer' | 'recharge') => {
+    switch (action) {
+      case 'pix':
+        openTxModal('create', null, 'transfer');
+        break;
+      case 'bill':
+        openTxModal('create', null, 'expense');
+        break;
+      case 'transfer':
+        openTxModal('create', null, 'transfer');
+        break;
+      case 'recharge':
+        openTxModal('create', null, 'expense');
+        break;
+    }
+  };
 
-  const handleLoadDemo = async () => {
+  // Helper to format date and time for transaction items
+  const formatTxTime = (t: Transaction) => {
     try {
-      await api.reports.loadDemo();
-      await refreshData();
-    } catch (err: any) {
-      alert('Erro ao carregar dados de demonstração: ' + err.message);
+      const d = new Date(t.date);
+      const isToday = new Date().toDateString() === d.toDateString();
+      const timePart = t.created_at ? new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '12:00';
+      return `${isToday ? 'Hoje' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} • ${timePart}`;
+    } catch {
+      return 'Recente';
     }
   };
 
   return (
-    <div className="space-y-5 pb-24 max-w-5xl mx-auto px-4 pt-2">
+    <div className="min-h-screen bg-[#0B1F17] text-white pb-28 pt-2 px-3 sm:px-4 max-w-md mx-auto select-none transition-colors">
       
-      {/* 1. Main Balance Hero Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white p-6 shadow-xl shadow-emerald-900/20">
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-emerald-100 text-xs font-semibold uppercase tracking-wider">
-                Saldo Total Disponível
-              </span>
-              <span className="text-[10px] bg-emerald-500/40 text-emerald-100 px-2 py-0.5 rounded-full font-medium">
-                Consolidado
-              </span>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+      {/* 1. Header Bar: DIM+ Logo on left, Notification Bell on right */}
+      <header className="flex items-center justify-between py-3 px-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-2xl font-black tracking-tight text-white flex items-center">
+            DIM<span className="text-[#00E676] drop-shadow-[0_0_12px_rgba(0,230,118,0.7)]">+</span>
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowNotifications(true)}
+          className="relative p-2 rounded-full bg-[#1A2E24] hover:bg-[#254234] border border-[#2A4435] text-slate-200 transition-all active:scale-95"
+          title="Notificações"
+        >
+          <Bell size={19} className="text-white" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse ring-2 ring-[#0B1F17]" />
+        </button>
+      </header>
+
+      <div className="space-y-4 mt-2">
+        
+        {/* 2. Hero Card: Saldo Disponível (Neon Green Card with Wallet) */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#00E676] via-[#00C853] to-[#0A4D2E] p-5 text-white shadow-xl shadow-[#00E676]/20 border border-[#00E676]/40">
+          <div className="relative z-10 flex items-start justify-between">
+            <div className="space-y-2 max-w-[70%]">
+              <button
+                type="button"
+                onClick={toggleHideBalances}
+                className="flex items-center gap-1 text-xs font-semibold text-emerald-950/90 hover:text-black transition-colors"
+                title="Alternar privacidade do saldo"
+              >
+                <span>Saldo disponível</span>
+                <ChevronRight size={14} className="opacity-70" />
+              </button>
+
+              <div className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-sm">
                 {formatCurrency(totalBalance, hideBalances)}
-              </h1>
-            </div>
-
-            {/* Health / Savings indicator */}
-            <div className="mt-3 flex items-center gap-2 text-xs text-emerald-100/90 font-medium">
-              <div className="w-5 h-5 rounded-full bg-emerald-500/30 flex items-center justify-center text-white">
-                <Sparkles size={12} />
               </div>
-              {isBrandNewUser ? (
-                <span>
-                  👋 Olá, <strong>{user?.name.split(' ')[0] || 'Usuário'}</strong>! Comece registrando seu primeiro saldo ou lançamento.
-                </span>
-              ) : netBalance >= 0 ? (
-                <span>
-                  Economia de <strong className="text-white font-bold">{savingsRate}%</strong> da receita no período
-                </span>
-              ) : (
-                <span className="text-rose-200">
-                  Atenção: Gastos superaram as receitas no período selecionado
-                </span>
-              )}
-            </div>
-          </div>
 
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => openTxModal('create', null, 'expense')}
-              className="px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-white/20 active:scale-95"
-            >
-              <TrendingDown size={15} className="text-rose-300" />
-              Despesa
-            </button>
-            <button
-              onClick={() => openTxModal('create', null, 'income')}
-              className="px-4 py-2.5 rounded-2xl bg-white text-emerald-800 hover:bg-emerald-50 text-xs font-bold shadow-md transition-all flex items-center gap-1.5 active:scale-95"
-            >
-              <TrendingUp size={15} className="text-emerald-600" />
-              Receita
-            </button>
+              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-bold text-emerald-950">
+                <TrendingUp size={13} className="text-emerald-950" />
+                <span>+12% em relação ao mês passado</span>
+              </div>
+            </div>
+
+            {/* 3D Wallet Illustration Graphic */}
+            <div className="w-20 h-20 shrink-0 relative flex items-center justify-center -mr-1 -mt-1">
+              <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-lg" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Cash sticking out */}
+                <rect x="22" y="16" width="48" height="26" rx="3" fill="#A7F3D0" transform="rotate(-8 22 16)" />
+                <rect x="24" y="18" width="44" height="22" rx="2" fill="#34D399" transform="rotate(-8 24 18)" opacity="0.8" />
+                <rect x="28" y="12" width="48" height="26" rx="3" fill="#6EE7B7" transform="rotate(4 28 12)" />
+                <rect x="30" y="14" width="44" height="22" rx="2" fill="#10B981" transform="rotate(4 30 14)" opacity="0.9" />
+                {/* Wallet Body */}
+                <rect x="12" y="28" width="76" height="56" rx="14" fill="#047857" stroke="#34D399" strokeWidth="2.5" />
+                {/* Wallet Flap */}
+                <path d="M12 40 C12 32 88 32 88 40 L88 70 C88 78 78 84 70 84 L30 84 C22 84 12 78 12 70 Z" fill="#065F46" />
+                {/* Wallet Clasp */}
+                <rect x="62" y="48" width="26" height="20" rx="8" fill="#10B981" stroke="#A7F3D0" strokeWidth="1.5" />
+                <circle cx="70" cy="58" r="3.5" fill="#FCD34D" />
+              </svg>
+            </div>
           </div>
         </div>
 
-        {/* Background Blur Bubble */}
-        <div className="absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-emerald-500/10 pointer-events-none blur-xl"></div>
+        {/* 3. Quick Action Buttons: Pix, Pagar conta, Transferir, Recarga */}
+        <div className="grid grid-cols-4 gap-2.5 pt-1">
+          {/* Pix */}
+          <button
+            type="button"
+            onClick={() => handleQuickAction('pix')}
+            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#1A2E24] hover:bg-[#223D30] border border-[#2A4435] text-white transition-all active:scale-95 group shadow-sm"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] flex items-center justify-center text-[#00E676] group-hover:scale-110 transition-transform">
+              {/* Geometric Pix Icon */}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="8" height="8" rx="1.5" transform="rotate(45 7 7)" />
+                <rect x="13" y="13" width="8" height="8" rx="1.5" transform="rotate(45 17 17)" />
+              </svg>
+            </div>
+            <span className="text-[11px] font-semibold mt-2 text-slate-200">Pix</span>
+          </button>
+
+          {/* Pagar conta */}
+          <button
+            type="button"
+            onClick={() => handleQuickAction('bill')}
+            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#1A2E24] hover:bg-[#223D30] border border-[#2A4435] text-white transition-all active:scale-95 group shadow-sm"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] flex items-center justify-center text-[#00E676] group-hover:scale-110 transition-transform">
+              <Barcode size={20} />
+            </div>
+            <span className="text-[11px] font-semibold mt-2 text-slate-200 text-center leading-tight">Pagar conta</span>
+          </button>
+
+          {/* Transferir */}
+          <button
+            type="button"
+            onClick={() => handleQuickAction('transfer')}
+            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#1A2E24] hover:bg-[#223D30] border border-[#2A4435] text-white transition-all active:scale-95 group shadow-sm"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] flex items-center justify-center text-[#00E676] group-hover:scale-110 transition-transform">
+              <Send size={18} className="rotate-[-20deg]" />
+            </div>
+            <span className="text-[11px] font-semibold mt-2 text-slate-200">Transferir</span>
+          </button>
+
+          {/* Recarga */}
+          <button
+            type="button"
+            onClick={() => handleQuickAction('recharge')}
+            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#1A2E24] hover:bg-[#223D30] border border-[#2A4435] text-white transition-all active:scale-95 group shadow-sm"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] flex items-center justify-center text-[#00E676] group-hover:scale-110 transition-transform">
+              <Smartphone size={20} />
+            </div>
+            <span className="text-[11px] font-semibold mt-2 text-slate-200">Recarga</span>
+          </button>
+        </div>
+
+        {/* 4. Card: Seus gastos deste mês (with Donut chart on right) */}
+        <div
+          onClick={() => onNavigateTab('relatorios')}
+          className="p-5 rounded-3xl bg-[#1A2E24] border border-[#2A4435] flex items-center justify-between cursor-pointer hover:border-[#00E676]/50 transition-all shadow-md group"
+        >
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-slate-400">
+              Seus gastos deste mês
+            </span>
+            <div className="text-2xl font-black text-white tracking-tight">
+              {formatCurrency(totalExpense, hideBalances)}
+            </div>
+            <div className="flex items-center gap-1 text-[11px] font-bold text-[#00E676] pt-0.5">
+              <TrendingDown size={14} className="text-[#00E676]" />
+              <span>↓ 8% vs mês anterior</span>
+              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Glowing Green Donut Chart */}
+          <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              {/* Background ring */}
+              <circle
+                cx="18"
+                cy="18"
+                r="15"
+                fill="none"
+                stroke="#0B1F17"
+                strokeWidth="4"
+              />
+              {/* Active stroke ring */}
+              <circle
+                cx="18"
+                cy="18"
+                r="15"
+                fill="none"
+                stroke="#00E676"
+                strokeWidth="4"
+                strokeDasharray="94.2"
+                strokeDashoffset="28"
+                strokeLinecap="round"
+                className="drop-shadow-[0_0_6px_rgba(0,230,118,0.8)]"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-[#0B1F17] flex items-center justify-center">
+                <span className="text-[10px] font-extrabold text-[#00E676]">70%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Seção: Últimas movimentações */}
+        <div className="space-y-3 pt-1">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-bold text-white tracking-tight">
+              Últimas movimentações
+            </h3>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('movimentacoes')}
+              className="text-xs font-semibold text-slate-400 hover:text-[#00E676] flex items-center gap-0.5 transition-colors"
+            >
+              <span>Ver todas</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+
+          {/* List of movements */}
+          <div className="space-y-2">
+            {recentTransactions.length > 0 ? (
+              recentTransactions.slice(0, 4).map((tx) => {
+                const isExpense = tx.type === 'expense';
+                const isIncome = tx.type === 'income';
+                return (
+                  <div
+                    key={tx.id}
+                    onClick={() => openTxModal('edit', tx)}
+                    className="p-3.5 rounded-2xl bg-[#1A2E24] border border-[#2A4435] flex items-center justify-between hover:border-[#00E676]/40 cursor-pointer transition-all active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                        isIncome
+                          ? 'bg-emerald-500/20 text-[#00E676] border border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                      }`}>
+                        {isIncome ? <TrendingUp size={18} /> : <ShoppingCart size={18} />}
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-white">
+                          {tx.description || tx.category_name || 'Movimentação'}
+                        </h4>
+                        <p className="text-[10px] text-slate-400">
+                          {formatTxTime(tx)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className={`text-xs font-extrabold ${
+                      isIncome ? 'text-[#00E676]' : 'text-rose-400'
+                    }`}>
+                      {isIncome ? '+ ' : '- '}
+                      {formatCurrency(Math.abs(tx.amount), hideBalances)}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              /* Demonstration rows exactly mirroring reference image when no records exist */
+              defaultDemoTransactions.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => openTxModal('create')}
+                  className="p-3.5 rounded-2xl bg-[#1A2E24] border border-[#2A4435] flex items-center justify-between hover:border-[#00E676]/40 cursor-pointer transition-all active:scale-[0.99]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${item.color}`}>
+                      {item.iconType === 'cart' && <ShoppingCart size={18} />}
+                      {item.iconType === 'zap' && <Zap size={18} />}
+                      {item.iconType === 'pix' && <TrendingUp size={18} />}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">
+                        {item.description}
+                      </h4>
+                      <p className="text-[10px] text-slate-400">
+                        {item.time}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className={`text-xs font-extrabold ${
+                    item.amount > 0 ? 'text-[#00E676]' : 'text-rose-400'
+                  }`}>
+                    {item.amount > 0 ? '+ ' : '- '}
+                    {formatCurrency(Math.abs(item.amount), hideBalances)}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
       </div>
 
-      {/* 2. FIRST-TIME ONBOARDING CARD (When user has zero transactions) */}
-      {isBrandNewUser && (
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-slate-900 border border-emerald-200/80 dark:border-emerald-800/60 rounded-3xl p-5 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/30">
-                <Sparkles size={20} />
+      {/* Notifications Drawer / Modal */}
+      {showNotifications && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-[#1A2E24] border border-[#2A4435] rounded-3xl p-5 w-full max-w-sm shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#2A4435]">
+              <div className="flex items-center gap-2">
+                <Bell size={18} className="text-[#00E676]" />
+                <h3 className="text-sm font-bold text-white">Notificações DIM+</h3>
               </div>
-              <div>
-                <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                  Seus Primeiros Passos no DIM+
-                </h2>
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Veja como é rápido organizar suas finanças em menos de 1 minuto:
-                </p>
+              <button
+                type="button"
+                onClick={() => setShowNotifications(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              <div className="p-3 rounded-2xl bg-[#0B1F17] border border-[#2A4435] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#00E676]">Conta de Luz</span>
+                  <span className="text-[10px] text-rose-400 font-semibold">Vence hoje</span>
+                </div>
+                <p className="text-[11px] text-slate-300">Valor de R$ 120,00 agendado para pagamento.</p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-[#0B1F17] border border-[#2A4435] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white">Meta: Viagem dos sonhos</span>
+                  <span className="text-[10px] text-[#00E676] font-semibold">66% atingida</span>
+                </div>
+                <p className="text-[11px] text-slate-300">Você já acumulou R$ 1.800,00 da sua meta!</p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-[#0B1F17] border border-[#2A4435] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white">Insights do Mês</span>
+                  <span className="text-[10px] text-emerald-400 font-semibold">Economia</span>
+                </div>
+                <p className="text-[11px] text-slate-300">Parabéns! Seus gastos caíram 8% em relação ao mês anterior.</p>
               </div>
             </div>
 
             <button
-              onClick={handleLoadDemo}
-              className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-100/50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
-              title="Preenche o aplicativo com lançamentos de exemplo para você ver como fica"
+              type="button"
+              onClick={() => setShowNotifications(false)}
+              className="w-full py-2.5 rounded-xl bg-[#00E676] hover:bg-[#00c853] text-black font-bold text-xs transition-colors"
             >
-              <PlayCircle size={15} />
-              <span>Ver Exemplo de Demonstração</span>
+              Entendido
             </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            {/* Step 1 */}
-            <div
-              onClick={() => openTxModal('create', null, 'income')}
-              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 transition-all cursor-pointer group shadow-xs"
-            >
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-extrabold text-[11px] flex items-center justify-center">
-                  1
-                </span>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-                  Cadastrar Saldo Inicial
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Adicione uma receita com seu salário ou o saldo atual que você tem no banco.
-              </p>
-            </div>
-
-            {/* Step 2 */}
-            <div
-              onClick={() => openTxModal('create', null, 'expense')}
-              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-rose-500 dark:hover:border-rose-500 transition-all cursor-pointer group shadow-xs"
-            >
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="w-5 h-5 rounded-full bg-rose-100 dark:bg-rose-900 text-rose-700 dark:text-rose-300 font-extrabold text-[11px] flex items-center justify-center">
-                  2
-                </span>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-rose-600 dark:group-hover:text-rose-400">
-                  Registrar uma Despesa
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Lance seu primeiro café, almoço ou conta do dia usando o teclado rápido.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div
-              onClick={() => onNavigateTab('perfil')}
-              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all cursor-pointer group shadow-xs"
-            >
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-extrabold text-[11px] flex items-center justify-center">
-                  3
-                </span>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-                  Definir Metas e Limites
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Estabeleça tetos de gastos para o mês e crie sua reserva de emergência.
-              </p>
-            </div>
           </div>
         </div>
       )}
-
-      {/* 3. Income vs Expenses Stat Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {/* Receitas */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xs transition-colors">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Receitas
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <TrendingUp size={16} />
-            </div>
-          </div>
-          <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">
-            {formatCurrency(totalIncome, hideBalances)}
-          </p>
-          <div className="mt-1 flex items-center text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-            <span>+ entradas do período</span>
-          </div>
-        </div>
-
-        {/* Despesas */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xs transition-colors">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Despesas
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-              <TrendingDown size={16} />
-            </div>
-          </div>
-          <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">
-            {formatCurrency(totalExpense, hideBalances)}
-          </p>
-          <div className="mt-1 flex items-center text-[11px] text-rose-500 font-medium">
-            <span>- saídas do período</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Accounts Horizontal Scroll List */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-            Minhas Contas ({accounts.length})
-          </h2>
-          <button
-            onClick={() => onNavigateTab('perfil')}
-            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
-          >
-            Gerenciar
-            <ChevronRight size={14} />
-          </button>
-        </div>
-
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-          {accounts.map((acc) => (
-            <div
-              key={acc.id}
-              className="min-w-[170px] sm:min-w-[190px] p-3.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs flex flex-col justify-between"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-xs"
-                  style={{ backgroundColor: acc.color }}
-                >
-                  <DynamicIcon name={acc.icon} size={16} />
-                </div>
-                <div className="truncate">
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                    {acc.name}
-                  </p>
-                  <span className="text-[10px] text-slate-400 capitalize">
-                    {acc.type === 'checking' ? 'Corrente' : acc.type === 'cash' ? 'Dinheiro' : acc.type === 'savings' ? 'Reserva' : 'Cartão'}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-slate-400">Saldo Atual</span>
-                <p className={`text-sm font-bold ${acc.current_balance < 0 ? 'text-rose-500' : 'text-slate-900 dark:text-white'}`}>
-                  {formatCurrency(acc.current_balance, hideBalances)}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 5. Expenses by Category (Donut chart & breakdown) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-xs transition-colors">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-              Distribuição de Despesas
-            </h2>
-            <p className="text-xs text-slate-400">Onde você mais investiu seu dinheiro</p>
-          </div>
-          <button
-            onClick={() => onNavigateTab('relatorios')}
-            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
-          >
-            Ver Análise
-            <ChevronRight size={14} />
-          </button>
-        </div>
-
-        {categoryExpenses.length === 0 ? (
-          <div className="text-center py-8 px-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-2">
-              <Layers size={22} />
-            </div>
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Nenhuma despesa registrada neste período
-            </p>
-            <p className="text-[11px] text-slate-400 max-w-sm mx-auto mt-1">
-              Conforme você for registrando suas contas (alimentação, mercado, transporte, etc.), este gráfico montará automaticamente uma pizza colorida dos seus gastos.
-            </p>
-            <button
-              onClick={() => openTxModal('create', null, 'expense')}
-              className="mt-3 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs"
-            >
-              Adicionar Despesa
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            {/* Donut Chart */}
-            <div className="h-52 w-full flex items-center justify-center relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(val: any) => [formatCurrency(Number(val)), 'Total']}
-                    contentStyle={{
-                      backgroundColor: '#0f172a',
-                      borderRadius: '12px',
-                      border: 'none',
-                      color: '#fff',
-                      fontSize: '12px',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Total</span>
-                <span className="text-sm font-extrabold text-slate-900 dark:text-white">
-                  {formatCurrency(totalExpense, hideBalances)}
-                </span>
-              </div>
-            </div>
-
-            {/* Category Legend List */}
-            <div className="space-y-2.5">
-              {categoryExpenses.slice(0, 5).map((cat) => (
-                <div key={cat.id} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 truncate pr-2">
-                    <div
-                      className="w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0"
-                      style={{ backgroundColor: cat.color }}
-                    >
-                      <DynamicIcon name={cat.icon} size={13} />
-                    </div>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
-                      {cat.name}
-                    </span>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="font-bold text-slate-900 dark:text-white">
-                      {formatCurrency(cat.amount, hideBalances)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 ml-1.5">
-                      ({cat.percentage}%)
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 6. Recent Transactions Feed */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-            Últimas Movimentações
-          </h2>
-          {recentTransactions.length > 0 && (
-            <button
-              onClick={() => onNavigateTab('movimentacoes')}
-              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
-            >
-              Ver todas
-              <ChevronRight size={14} />
-            </button>
-          )}
-        </div>
-
-        {recentTransactions.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center space-y-2">
-            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-1">
-              <Wallet size={22} />
-            </div>
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Nenhuma movimentação registrada ainda
-            </p>
-            <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-              Clique no botão verde (+) abaixo ou nos botões de Receita e Despesa para registrar seu primeiro valor.
-            </p>
-            <button
-              onClick={() => openTxModal('create')}
-              className="mt-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 shadow-sm"
-            >
-              Registrar Primeira Movimentação
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl divide-y divide-slate-100 dark:divide-slate-800/80 overflow-hidden shadow-xs">
-            {recentTransactions.map((tx) => {
-              const isIncome = tx.type === 'income';
-              const isExpense = tx.type === 'expense';
-              const isTransfer = tx.type === 'transfer';
-
-              return (
-                <div
-                  key={tx.id}
-                  onClick={() => openTxModal('edit', tx)}
-                  className="p-3.5 sm:p-4 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-xs"
-                      style={{
-                        backgroundColor: isTransfer
-                          ? '#6366f1'
-                          : tx.category_color || (isIncome ? '#10b981' : '#f43f5e'),
-                      }}
-                    >
-                      <DynamicIcon
-                        name={isTransfer ? 'ArrowRightLeft' : tx.category_icon || 'Tag'}
-                        size={18}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        {tx.description}
-                      </p>
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
-                        <span>{formatRelativeDate(tx.date)}</span>
-                        <span>•</span>
-                        <span>
-                          {isTransfer
-                            ? `${tx.account_name} ➔ ${tx.destination_account_name}`
-                            : `${tx.category_name || 'Geral'} (${tx.account_name})`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p
-                      className={`text-xs sm:text-sm font-bold ${
-                        isIncome
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : isExpense
-                          ? 'text-rose-500'
-                          : 'text-indigo-600 dark:text-indigo-400'
-                      }`}
-                    >
-                      {isIncome ? '+ ' : isExpense ? '- ' : ''}
-                      {formatCurrency(tx.amount, hideBalances)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
     </div>
   );

@@ -1,9 +1,9 @@
 import React from 'react';
 import {
   Home,
-  Receipt,
+  LayoutGrid,
   Plus,
-  PieChart,
+  Target,
   User
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
@@ -17,33 +17,35 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onTabChange })
   const { openTxModal } = useFinance();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-800/80 pb-safe transition-colors">
-      <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between relative">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#0B1F17]/95 backdrop-blur-xl border-t border-[#2A4435] pb-safe transition-colors">
+      <div className="max-w-md mx-auto px-3 h-16 flex items-center justify-between relative">
         
         {/* Tab 1: Início */}
         <button
+          type="button"
           onClick={() => onTabChange('inicio')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
             currentTab === 'inicio'
-              ? 'text-emerald-600 dark:text-emerald-400 font-bold scale-105'
-              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
+              ? 'text-[#00E676] font-bold scale-105'
+              : 'text-slate-400 hover:text-white font-medium'
           }`}
         >
-          <Home size={20} className={currentTab === 'inicio' ? 'stroke-[2.5]' : 'stroke-2'} />
+          <Home size={20} className={currentTab === 'inicio' ? 'stroke-[2.5] text-[#00E676] drop-shadow-[0_0_8px_rgba(0,230,118,0.6)]' : 'stroke-2'} />
           <span className="text-[10px] mt-1 tracking-tight">Início</span>
         </button>
 
-        {/* Tab 2: Movimentações */}
+        {/* Tab 2: Categorias */}
         <button
-          onClick={() => onTabChange('movimentacoes')}
+          type="button"
+          onClick={() => onTabChange('categorias')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            currentTab === 'movimentacoes'
-              ? 'text-emerald-600 dark:text-emerald-400 font-bold scale-105'
-              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
+            currentTab === 'categorias'
+              ? 'text-[#00E676] font-bold scale-105'
+              : 'text-slate-400 hover:text-white font-medium'
           }`}
         >
-          <Receipt size={20} className={currentTab === 'movimentacoes' ? 'stroke-[2.5]' : 'stroke-2'} />
-          <span className="text-[10px] mt-1 tracking-tight">Movimentações</span>
+          <LayoutGrid size={20} className={currentTab === 'categorias' ? 'stroke-[2.5] text-[#00E676] drop-shadow-[0_0_8px_rgba(0,230,118,0.6)]' : 'stroke-2'} />
+          <span className="text-[10px] mt-1 tracking-tight">Categorias</span>
         </button>
 
         {/* Center Tab: Action Button (Adicionar +) */}
@@ -52,35 +54,37 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onTabChange })
             type="button"
             onClick={() => openTxModal('create')}
             title="Adicionar Movimentação"
-            className="w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-600/40 ring-4 ring-white dark:ring-slate-900 active:scale-90 hover:scale-105 transition-all"
+            className="w-13 h-13 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black flex items-center justify-center shadow-lg shadow-[#00E676]/40 ring-4 ring-[#0B1F17] active:scale-90 hover:scale-105 transition-all cursor-pointer"
           >
-            <Plus size={28} className="stroke-[2.8]" />
+            <Plus size={26} className="stroke-[3] text-black" />
           </button>
         </div>
 
-        {/* Tab 4: Relatórios */}
+        {/* Tab 4: Metas */}
         <button
-          onClick={() => onTabChange('relatorios')}
+          type="button"
+          onClick={() => onTabChange('metas')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            currentTab === 'relatorios'
-              ? 'text-emerald-600 dark:text-emerald-400 font-bold scale-105'
-              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
+            currentTab === 'metas'
+              ? 'text-[#00E676] font-bold scale-105'
+              : 'text-slate-400 hover:text-white font-medium'
           }`}
         >
-          <PieChart size={20} className={currentTab === 'relatorios' ? 'stroke-[2.5]' : 'stroke-2'} />
-          <span className="text-[10px] mt-1 tracking-tight">Relatórios</span>
+          <Target size={20} className={currentTab === 'metas' ? 'stroke-[2.5] text-[#00E676] drop-shadow-[0_0_8px_rgba(0,230,118,0.6)]' : 'stroke-2'} />
+          <span className="text-[10px] mt-1 tracking-tight">Metas</span>
         </button>
 
         {/* Tab 5: Perfil */}
         <button
+          type="button"
           onClick={() => onTabChange('perfil')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
             currentTab === 'perfil'
-              ? 'text-emerald-600 dark:text-emerald-400 font-bold scale-105'
-              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
+              ? 'text-[#00E676] font-bold scale-105'
+              : 'text-slate-400 hover:text-white font-medium'
           }`}
         >
-          <User size={20} className={currentTab === 'perfil' ? 'stroke-[2.5]' : 'stroke-2'} />
+          <User size={20} className={currentTab === 'perfil' ? 'stroke-[2.5] text-[#00E676] drop-shadow-[0_0_8px_rgba(0,230,118,0.6)]' : 'stroke-2'} />
           <span className="text-[10px] mt-1 tracking-tight">Perfil</span>
         </button>
 
