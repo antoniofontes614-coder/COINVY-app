@@ -84,12 +84,16 @@ export const TransactionModal: React.FC = () => {
           }
         }
 
-        // Preselect first matching category
-        const initialCats = categories.filter(c => c.type === (txModalInitialType || 'expense'));
-        if (initialCats.length > 0) {
-          setCategoryId(initialCats[0].id);
+        // Preselect matching category
+        if (editingTransaction?.category_id) {
+          setCategoryId(editingTransaction.category_id);
         } else {
-          setCategoryId('');
+          const initialCats = categories.filter(c => c.type === (editingTransaction?.type || txModalInitialType || 'expense'));
+          if (initialCats.length > 0) {
+            setCategoryId(initialCats[0].id);
+          } else {
+            setCategoryId('');
+          }
         }
       }
     }

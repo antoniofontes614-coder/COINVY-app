@@ -30,6 +30,7 @@ export interface QuickShortcut {
   id: string;
   label: string;
   icon: string;
+  categoryId?: string;
 }
 
 const DEFAULT_SHORTCUTS: QuickShortcut[] = [
@@ -52,7 +53,7 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) => {
-  const { summary, openTxModal } = useFinance();
+  const { summary, openTxModal, categories } = useFinance();
   const { user, hideBalances, toggleHideBalances } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -101,7 +102,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
   };
 
   const handleShortcutClick = (shortcut: QuickShortcut) => {
-    openTxModal('create', { description: shortcut.label, type: 'expense' } as any, 'expense');
+    const matchedCategory = categories.find(
+      (c) => (shortcut.categoryId && c.id === shortcut.categoryId) || c.name.toLowerCase() === shortcut.label.toLowerCase()
+    );
+
+    openTxModal(
+      'create',
+      {
+        description: shortcut.label,
+        category_id: matchedCategory ? matchedCategory.id : undefined,
+        type: matchedCategory ? matchedCategory.type : 'expense',
+      } as any,
+      matchedCategory ? matchedCategory.type : 'expense'
+    );
   };
 
   const chartData = categoryExpenses.map((c) => ({
@@ -504,56 +517,107 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
             </div>
 
             <p className="text-xs text-slate-300">
-              Personalize o nome e o ícone de cada um dos 4 atalhos da sua tela inicial:
+              Personalize os 4 atalhos da sua tela inicial ou vincule-os a qualquer uma das suas categorias cadastradas:
             </p>
 
             <div className="space-y-3">
               {tempShortcuts.map((item, idx) => (
-                <div key={item.id} className="p-3 rounded-2xl bg-[#0B1F17] border border-[#2A4435] space-y-2">
+                <div key={item.id} className="p-3.5 rounded-2xl bg-[#0B1F17] border border-[#2A4435] space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-400">Atalho {idx + 1}</span>
-                    <div className="w-7 h-7 rounded-lg bg-[#1A2E24] border border-[#2A4435] flex items-center justify-center text-[#00E676]">
-                      <DynamicIcon name={item.icon} size={15} />
+                    <span className="text-[11px] font-bold text-slate-300">Atalho {idx + 1}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400">Prévia:</span>
+                      <div className="w-7 h-7 rounded-lg bg-[#1A2E24] border border-[#2A4435] flex items-center justify-center text-[#00E676]">
+                        <DynamicIcon name={item.icon} size={15} />
+                      </div>
                     </div>
                   </div>
 
-                  <input
-                    type="text"
-                    value={item.label}
-                    maxLength={14}
-                    onChange={(e) => {
-                      const updated = [...tempShortcuts];
-                      updated[idx].label = e.target.value;
-                      setTempShortcuts(updated);
-                    }}
-                    placeholder="Nome do atalho"
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#1A2E24] border border-[#2A4435] text-white text-xs focus:border-[#00E676] outline-none"
-                  />
+                  {/* 1. Escolha rápida a partir das Categorias Cadastradas */}
+                  {categories.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-semibold text-slate-400">Suas Categorias:</span>
+                        <span className="text-[#00E676] font-bold">{categories.length} disponíveis</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar">
+                        {categories.map((cat) => {
+                          const isChosen = item.categoryId === cat.id || item.label.toLowerCase() === cat.name.toLowerCase();
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => {
+                                const updated = [...tempShortcuts];
+                                updated[idx].label = cat.name;
+                                updated[idx].icon = cat.icon || 'Tag';
+                                updated[idx].categoryId = cat.id;
+                                setTempShortcuts(updated);
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1 shrink-0 transition-all cursor-pointer ${
+                                isChosen
+                                  ? 'bg-[#00E676] text-black font-bold shadow-sm'
+                                  : 'bg-[#1A2E24] border border-[#2A4435] text-slate-300 hover:text-white hover:border-[#00E676]/40'
+                              }`}
+                              title={`Usar categoria ${cat.name}`}
+                            >
+                              <DynamicIcon name={cat.icon || 'Tag'} size={12} />
+                              <span>{cat.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-                  {/* Icon Selection Row */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5">
-                    {AVAILABLE_SHORTCUT_ICONS.map((iconName) => {
-                      const isSelected = item.icon === iconName;
-                      return (
-                        <button
-                          key={iconName}
-                          type="button"
-                          onClick={() => {
-                            const updated = [...tempShortcuts];
-                            updated[idx].icon = iconName;
-                            setTempShortcuts(updated);
-                          }}
-                          className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-[#00E676] text-black ring-1 ring-[#00E676]'
-                              : 'bg-[#1A2E24] text-slate-300 hover:text-white border border-[#2A4435]'
-                          }`}
-                          title={iconName}
-                        >
-                          <DynamicIcon name={iconName} size={14} />
-                        </button>
-                      );
-                    })}
+                  {/* 2. Campo de Texto Customizado */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 block mb-1">
+                      Nome exibido no botão:
+                    </span>
+                    <input
+                      type="text"
+                      value={item.label}
+                      maxLength={14}
+                      onChange={(e) => {
+                        const updated = [...tempShortcuts];
+                        updated[idx].label = e.target.value;
+                        setTempShortcuts(updated);
+                      }}
+                      placeholder="Nome do atalho"
+                      className="w-full px-3 py-1.5 rounded-xl bg-[#1A2E24] border border-[#2A4435] text-white text-xs focus:border-[#00E676] outline-none"
+                    />
+                  </div>
+
+                  {/* 3. Galeria de Ícones */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 block mb-1">
+                      Ícone do botão:
+                    </span>
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar">
+                      {AVAILABLE_SHORTCUT_ICONS.map((iconName) => {
+                        const isSelected = item.icon === iconName;
+                        return (
+                          <button
+                            key={iconName}
+                            type="button"
+                            onClick={() => {
+                              const updated = [...tempShortcuts];
+                              updated[idx].icon = iconName;
+                              setTempShortcuts(updated);
+                            }}
+                            className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#00E676] text-black ring-1 ring-[#00E676]'
+                                : 'bg-[#1A2E24] text-slate-300 hover:text-white border border-[#2A4435]'
+                            }`}
+                            title={iconName}
+                          >
+                            <DynamicIcon name={iconName} size={14} />
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               ))}
