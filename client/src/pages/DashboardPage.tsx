@@ -161,6 +161,47 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
           </div>
         </div>
 
+        {/* 2.5 Resumo: Entradas e Saídas (Receitas e Despesas) */}
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Entradas */}
+          <div
+            onClick={() => openTxModal('create', null, 'income')}
+            className="p-3.5 rounded-2xl bg-[#1A2E24] border border-[#2A4435] hover:border-[#00E676]/50 transition-all cursor-pointer group shadow-sm flex items-center justify-between"
+            title="Clique para adicionar ou ver receitas"
+          >
+            <div>
+              <span className="text-[11px] font-medium text-slate-400 block">
+                Entradas (Receitas)
+              </span>
+              <span className="text-base font-extrabold text-[#00E676] tracking-tight mt-0.5 block">
+                {formatCurrency(totalIncome, hideBalances)}
+              </span>
+            </div>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-[#00E676] flex items-center justify-center shrink-0 border border-emerald-500/30 group-hover:scale-110 transition-transform">
+              <TrendingUp size={16} />
+            </div>
+          </div>
+
+          {/* Saídas */}
+          <div
+            onClick={() => openTxModal('create', null, 'expense')}
+            className="p-3.5 rounded-2xl bg-[#1A2E24] border border-[#2A4435] hover:border-rose-500/50 transition-all cursor-pointer group shadow-sm flex items-center justify-between"
+            title="Clique para adicionar ou ver despesas"
+          >
+            <div>
+              <span className="text-[11px] font-medium text-slate-400 block">
+                Saídas (Despesas)
+              </span>
+              <span className="text-base font-extrabold text-rose-400 tracking-tight mt-0.5 block">
+                {formatCurrency(totalExpense, hideBalances)}
+              </span>
+            </div>
+            <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/30 group-hover:scale-110 transition-transform">
+              <TrendingDown size={16} />
+            </div>
+          </div>
+        </div>
+
         {/* 3. Quick Action Buttons: Pix, Pagar conta, Transferir, Recarga */}
         <div className="grid grid-cols-4 gap-2.5 pt-1">
           {/* Pix */}
