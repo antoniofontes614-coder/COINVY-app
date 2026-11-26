@@ -6,6 +6,7 @@ import {
   Eye,
   EyeOff,
   FileSpreadsheet,
+  FileText,
   Download,
   Trash2,
   Sparkles,
@@ -24,10 +25,11 @@ import { useFinance } from '../../context/FinanceContext';
 import { api } from '../../services/api';
 import { localDb } from '../../services/storage';
 import { exportTransactionsCSV, downloadFile } from '../../utils/export';
+import { generateDIMReportPDF } from '../../utils/pdfExport';
 
 export const SettingsSection: React.FC = () => {
   const { user, updateUser, updateAvatar, theme, toggleTheme, setThemeMode, hideBalances, toggleHideBalances, logout } = useAuth();
-  const { refreshData } = useFinance();
+  const { refreshData, summary, accounts } = useFinance();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name || '');
@@ -38,6 +40,33 @@ export const SettingsSection: React.FC = () => {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+  const handleExportPDF = async () => {
+    setIsGeneratingPDF(true);
+    try {
+      const [txRes, goalsRes] = await Promise.all([
+        api.transactions.list({ limit: 1000 }).catch(() => ({ transactions: localDb.listTransactions().transactions })),
+        api.goals.list().catch(() => ({ goals: localDb.listGoals().goals })),
+      ]);
+
+      await generateDIMReportPDF({
+        user,
+        summary,
+        transactions: txRes.transactions,
+        goals: goalsRes.goals,
+        accounts,
+      });
+
+      setDataMessage({ text: 'Relatório em PDF oficial gerado e baixado com sucesso!', type: 'success' });
+      setTimeout(() => setDataMessage(null), 4000);
+    } catch (err: any) {
+      console.error(err);
+      setDataMessage({ text: err.message || 'Erro ao gerar o relatório em PDF.', type: 'error' });
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
 
   // Keep local fields in sync when user updates
   useEffect(() => {
@@ -467,43 +496,96 @@ export const SettingsSection: React.FC = () => {
         </div>
       </div>
 
+      {/* 1-Clique Relatório PDF Oficial DIM+ */}
+      <div className="p-5 bg-gradient-to-br from-[#1A2E24] to-[#12231B] border border-[#00E676]/40 rounded-3xl shadow-lg shadow-[#00E676]/5 space-y-3 relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-[#0B1F17] text-[#00E676] border border-[#00E676]/30 flex items-center justify-center shrink-0 shadow-inner">
+              <FileText size={22} />
+            </div>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white">
+                  Relatório Completo em PDF (DIM+)
+                </h3>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#00E676] text-black">
+                  1 Clique
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 max-w-md">
+                Baixe um documento profissional formatado com o logotipo oficial do DIM+, detalhando seu saldo, receitas, despesas por categoria e todas as movimentações.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            disabled={isGeneratingPDF}
+            className="px-4 py-2.5 rounded-xl bg-[#00E676] hover:bg-[#00c853] text-black text-xs font-bold transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
+          >
+            <Download size={15} />
+            <span>{isGeneratingPDF ? 'Gerando PDF...' : 'Baixar PDF Oficial'}</span>
+          </button>
+        </div>
+      </div>
+
       {/* Data Management & Export Card */}
       <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
           Dados, Exportação e Backup
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button
+            onClick={handleExportPDF}
+            disabled={isGeneratingPDF}
+            className="p-3.5 rounded-2xl border border-[#00E676]/40 hover:border-[#00E676] bg-[#00E676]/10 text-left flex items-center gap-3 transition-colors cursor-pointer group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#0B1F17] text-[#00E676] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <FileText size={20} />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                <span>Relatório PDF</span>
+                <span className="text-[9px] bg-[#00E676] text-black font-extrabold px-1.5 py-0.2 rounded-full">Top</span>
+              </h4>
+              <p className="text-[10px] text-slate-400">
+                PDF com logotipo e resumo
+              </p>
+            </div>
+          </button>
+
           <button
             onClick={handleExportCSV}
-            className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 bg-slate-50/50 dark:bg-slate-800/40 text-left flex items-center gap-3 transition-colors"
+            className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 bg-slate-50/50 dark:bg-slate-800/40 text-left flex items-center gap-3 transition-colors cursor-pointer"
           >
             <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shrink-0">
               <FileSpreadsheet size={20} />
             </div>
             <div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                Exportar para Excel (CSV)
+                Exportar para Excel
               </h4>
               <p className="text-[10px] text-slate-400">
-                Planilha com todas as movimentações
+                Planilha CSV completa
               </p>
             </div>
           </button>
 
           <button
             onClick={handleExportJSON}
-            className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 bg-slate-50/50 dark:bg-slate-800/40 text-left flex items-center gap-3 transition-colors"
+            className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 bg-slate-50/50 dark:bg-slate-800/40 text-left flex items-center gap-3 transition-colors cursor-pointer"
           >
             <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center shrink-0">
               <Download size={20} />
             </div>
             <div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                Backup Completo (JSON)
+                Backup (JSON)
               </h4>
               <p className="text-[10px] text-slate-400">
-                Cópia de segurança de todos os seus dados
+                Cópia de segurança
               </p>
             </div>
           </button>
